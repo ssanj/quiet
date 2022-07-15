@@ -12,13 +12,13 @@ fn main() -> JsonResult<()>{
       //if  type of reason is compiler-message, then we want the full payload otherwise ignore?
       // we also want the build-finished
       if reason.reason == "compiler-message" {
-        println!("Line ---> {}", &line);
+        // println!("Line ---> {}", &line);
         let compiler_message: CompilerMessage = serde_json::from_str(&line)?;
-        println!("*** {:?}", compiler_message);
+        println!("*** {}", compiler_message.message.rendered);
       } else {
         //do nothing
       }
     }
-
+    println!("\u{1b}[38;5;9merror\u{1b}[");
     Ok(())
 }

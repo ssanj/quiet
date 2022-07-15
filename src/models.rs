@@ -38,50 +38,51 @@ struct BuildFinished {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompilerMessage {
-  target: CompilerMessageTarget,
-  message: CompilerMessageMessage,
+  pub target: CompilerMessageTarget,
+  pub message: CompilerMessageMessage,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct CompilerMessageTarget {
+pub struct CompilerMessageTarget {
   name: String,
   src_path: String
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct CompilerMessageMessage {
-  rendered: String,
-  code: Option<CompilerMessageCode>,
-  level: String,
-  message: String,
-  // spans: Vec<CompilerMessageSpan>
+pub struct CompilerMessageMessage {
+  pub rendered: String,
+  pub code: Option<CompilerMessageCode>,
+  pub level: String,
+  pub message: String,
+  pub spans: Vec<CompilerMessageSpan>
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct CompilerMessageCode {
+pub struct CompilerMessageCode {
   code: String,
   explanation: String
 }
 
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct CompilerMessageSpan {
+pub struct CompilerMessageSpan {
   byte_end: usize,
   byte_start: usize,
   column_end: u32,
   column_start: u32,
-  expansion: String,
+  expansion: Option<String>,
   file_name: String,
   is_primary: bool,
-  label:String,
+  label: Option<String>,
   line_end: u32,
   line_start: u32,
-  suggested_replacement: String,
-  suggestion_applicability: String,
+  suggested_replacement: Option<String>,
+  suggestion_applicability: Option<String>,
   text: Vec<CompilerMessageSpanText>
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct CompilerMessageSpanText {
+pub struct CompilerMessageSpanText {
   highlight_end: u32,
   highlight_start: u32,
   text: String
