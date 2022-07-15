@@ -44,8 +44,8 @@ pub struct CompilerMessage {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompilerMessageTarget {
-  name: String,
-  src_path: String
+  pub name: String,
+  pub src_path: String
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -71,7 +71,7 @@ pub struct CompilerMessageSpan {
   column_end: u32,
   column_start: u32,
   expansion: Option<String>,
-  file_name: String,
+  pub file_name: String,
   is_primary: bool,
   label: Option<String>,
   line_end: u32,
