@@ -1,4 +1,5 @@
 use serde::{Serialize, Deserialize};
+use clap::Parser;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Reason {
@@ -87,3 +88,16 @@ pub struct CompilerMessageSpanText {
   highlight_start: u32,
   text: String
 }
+
+#[derive(Parser)]
+#[clap(author, version, about)]
+#[derive(Debug, Clone)]
+pub struct Cli {
+
+  #[clap(long, value_parser)]
+  pub errors: u8,
+
+  #[clap(long, value_parser)]
+  pub filter: Option<String>
+}
+
