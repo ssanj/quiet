@@ -23,7 +23,9 @@ fn main() -> JsonResult<()>{
           //if  type of reason is compiler-message, then we want the full payload otherwise ignore?
           // we also want the build-finished
           if reason.reason == "compiler-message" {
-            let compiler_message: CompilerMessage = serde_json::from_str(&line).unwrap();
+            let line_with_error = format!("******************* Failed to parse this line: {}", &line);
+            // Dump out line if this result fails so we know where to look
+            let compiler_message: CompilerMessage = serde_json::from_str(&line).expect(&line_with_error);
             Some(compiler_message)
           } else {
             None

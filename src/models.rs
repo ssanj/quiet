@@ -61,7 +61,7 @@ pub struct CompilerMessageMessage {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompilerMessageCode {
   code: String,
-  explanation: String
+  explanation: Option<String>
 }
 
 
