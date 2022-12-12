@@ -2,7 +2,7 @@ use std::{io::{self, BufRead}, convert::identity};
 use clap::Parser;
 use serde_json::Result as JsonResult;
 use crate::models::{CompilerMessage, Reason, Cli};
-use ansi_term::Colour::Green;
+use ansi_term::Colour::{Green, Red};
 
 mod models;
 
@@ -20,18 +20,23 @@ fn main() -> JsonResult<()>{
       .into_iter()
       .filter_map(|line_result|{
         let line = line_result.unwrap();
-        let line_with_decoding_error = format!("******************* Failed to decode Reason from this line: {}", &line);
-        let reason: Reason = serde_json::from_str(&line).expect(&line_with_decoding_error);
-
-        //if  type of reason is compiler-message, then we want the full payload otherwise ignore?
-        // we also want the build-finished
-        if reason.reason == "compiler-message" {
-          let line_with_error = format!("******************* Failed to decode CompilerMessage from this line: {}", &line);
-          // Dump out line if this result fails so we know where to look
-          let compiler_message: CompilerMessage = serde_json::from_str(&line).expect(&line_with_error);
-          Some(compiler_message)
-        } else {
+        if !&line.starts_with("{") {
+          println!("stdout: {}", &line); // Not json, just output it and proceed to the next line
           None
+        } else {
+          let line_with_decoding_error = format!("******************* Failed to decode Reason from this line: {}", Red.paint(&line));
+          let reason: Reason = serde_json::from_str(&line).expect(&line_with_decoding_error);
+
+          //if  type of reason is compiler-message, then we want the full payload otherwise ignore?
+          // we also want the build-finished
+          if reason.reason == "compiler-message" {
+            let line_with_error = format!("******************* Failed to decode CompilerMessage from this line: {}", Red.paint(&line));
+            // Dump out line if this result fails so we know where to look
+            let compiler_message: CompilerMessage = serde_json::from_str(&line).expect(&line_with_error);
+            Some(compiler_message)
+          } else {
+            None
+          }
         }
       }).collect();
 

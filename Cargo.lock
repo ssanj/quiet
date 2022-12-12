@@ -183,7 +183,7 @@ dependencies = [
 
 [[package]]
 name = "quiet"
-version = "0.1.10"
+version = "0.1.11"
 dependencies = [
  "ansi_term",
  "clap",
