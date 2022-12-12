@@ -2,6 +2,7 @@ use std::{io::{self, BufRead}, convert::identity};
 use clap::Parser;
 use serde_json::Result as JsonResult;
 use crate::models::{CompilerMessage, Reason, Cli};
+use ansi_term::Colour::Green;
 
 mod models;
 
@@ -91,7 +92,7 @@ fn main() -> JsonResult<()>{
         prefix.to_owned()
       };
 
-    println!("{}", message)
+    println!("{}", Green.paint(message))
   }
 
   Ok(())

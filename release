@@ -1,0 +1,6 @@
+#!/bin/bash
+
+cargo build --release
+cp target/release/quiet ~/bin/
+echo "Install Version:"
+quiet -V
