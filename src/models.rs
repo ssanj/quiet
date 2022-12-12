@@ -71,7 +71,7 @@ pub struct CompilerMessageSpan {
   byte_start: usize,
   column_end: u32,
   column_start: u32,
-  expansion: Option<String>,
+  expansion: Option<Box<CompilerMessageSpanExpansion>>,
   pub file_name: String,
   is_primary: bool,
   label: Option<String>,
@@ -80,6 +80,13 @@ pub struct CompilerMessageSpan {
   suggested_replacement: Option<String>,
   suggestion_applicability: Option<String>,
   text: Vec<CompilerMessageSpanText>
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompilerMessageSpanExpansion {
+  span:  CompilerMessageSpan,
+  macro_decl_name: String,
+  def_site_span: CompilerMessageSpan
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
