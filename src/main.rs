@@ -89,7 +89,7 @@ fn main() -> JsonResult<()>{
       });
 
   if printed_items == 0 {
-    let prefix = "*** No errors";
+    let prefix = "*** No compilations errors";
     let message =
       if show_warnings {
         format!("{} or warnings", prefix)
