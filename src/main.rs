@@ -2,7 +2,7 @@ use std::{io::{self, BufRead}, convert::identity};
 use clap::Parser;
 use serde_json::Result as JsonResult;
 use crate::models::{CompilerMessage, Reason, Cli};
-use ansi_term::Colour::{Green, Red};
+use ansi_term::Colour::{Green, Red, RGB};
 
 mod models;
 
@@ -21,7 +21,7 @@ fn main() -> JsonResult<()>{
       .filter_map(|line_result|{
         let line = line_result.unwrap();
         if !&line.starts_with("{") {
-          println!("stdout: {}", &line); // Not json, just output it and proceed to the next line
+          println!("{} {}", RGB(133, 138, 118).paint("stdout:"), &line); // Not json, just output it and proceed to the next line
           None
         } else {
           let line_with_decoding_error = format!("******************* Failed to decode Reason from this line: {}", Red.paint(&line));

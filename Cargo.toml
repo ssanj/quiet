@@ -1,6 +1,6 @@
 [package]
 name = "quiet"
-version = "0.1.12"
+version = "0.1.14"
 edition = "2021"
 authors = ["Sanj Sahayam"]
 description = "Reduce Cargo's compiler information output"
