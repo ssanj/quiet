@@ -3,6 +3,7 @@ use clap::Parser;
 use serde_json::Result as JsonResult;
 use crate::models::{CompilerMessage, Reason, Cli};
 use ansi_term::Colour::{Green, Red, RGB};
+use std::time::SystemTime;
 
 mod models;
 
@@ -11,6 +12,7 @@ fn main() -> JsonResult<()>{
   let errors_to_show = cli.errors as usize;
   let file_to_show_errors_for = cli.file_filter;
   let show_warnings = cli.show_warnings;
+  print_start_banner();
 
   let stdin = io::stdin();
 
@@ -118,4 +120,18 @@ fn updated_stdout_line(line: &str) -> String {
   } else {
     format!("{} {}", RGB(133, 138, 118).paint("stdout:"), &line)
   }
+}
+
+fn print_start_banner() {
+  println!();
+  let time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).map(|d| d.as_millis()).expect("EPOCH is before current time. What?!?");
+  let time_str = format!("{}", time);
+  let id: String =
+    time_str
+      .chars()
+      .rev()
+      .take(7)
+      .collect();
+
+  println!("---------- quiet [{}]----------", id);
 }
