@@ -21,7 +21,8 @@ fn main() -> JsonResult<()>{
       .filter_map(|line_result|{
         let line = line_result.unwrap();
         if !&line.starts_with("{") {
-          println!("{} {}", RGB(133, 138, 118).paint("stdout:"), &line); // Not json, just output it and proceed to the next line
+          let new_line = updated_stdout_line(&line);
+          println!("{}", new_line);
           None
         } else {
           let line_with_decoding_error = format!("******************* Failed to decode Reason from this line: {}", Red.paint(&line));
@@ -101,4 +102,20 @@ fn main() -> JsonResult<()>{
   }
 
   Ok(())
+}
+
+fn updated_stdout_line(line: &str) -> String {
+  if line == "failures:" {
+    format!("{} {}", RGB(133, 138, 118).paint("stdout:"), Red.paint(line))
+  } else if line.starts_with("test result: FAILED.") {
+    let failure = format!("test result: {}.", Red.paint("FAILED"));
+    let message = format!("{}{}", failure, line.strip_prefix("test result: FAILED.").unwrap_or_else(|| ""));
+    format!("{} {}", RGB(133, 138, 118).paint("stdout:"), message)
+  } else if line.starts_with("test result: ok.") {
+    let failure = format!("test result: {}.", Green.paint("ok"));
+    let message = format!("{}{}", failure, line.strip_prefix("test result: ok.").unwrap_or_else(|| ""));
+    format!("{} {}", RGB(133, 138, 118).paint("stdout:"), message)
+  } else {
+    format!("{} {}", RGB(133, 138, 118).paint("stdout:"), &line)
+  }
 }
