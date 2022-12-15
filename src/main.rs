@@ -1,8 +1,8 @@
-use std::{io::{self, BufRead}, convert::identity};
+use std::{io::{self, BufRead}};
 use clap::Parser;
 use serde_json::Result as JsonResult;
 use crate::models::{CompilerMessage, Reason, Cli};
-use ansi_term::Colour::{Green, Red, RGB};
+use ansi_term::Colour::{Green, Red, Blue, RGB};
 use std::time::SystemTime;
 
 mod models;
@@ -118,8 +118,12 @@ fn updated_stdout_line(line: &str) -> String {
     let message = format!("{}{}", failure, line.strip_prefix("test result: ok.").unwrap_or_else(|| ""));
     format!("{} {}", RGB(133, 138, 118).paint("stdout:"), message)
   } else {
-    format!("{} {}", RGB(133, 138, 118).paint("stdout:"), &line)
+    default_stdout_line(line)
   }
+}
+
+fn default_stdout_line(line: &str) -> String {
+  format!("{} {}", RGB(133, 138, 118).paint("stdout:"), line)
 }
 
 fn print_start_banner() {
@@ -133,5 +137,6 @@ fn print_start_banner() {
       .take(7)
       .collect();
 
-  println!("---------- quiet [{}]----------", id);
+  let id_string = format!("---------- quiet [{}]----------", id);
+  println!("{}", Blue.paint(id_string));
 }
