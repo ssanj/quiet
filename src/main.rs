@@ -114,8 +114,8 @@ fn updated_stdout_line(line: &str) -> String {
     let message = format!("{}{}", failure, line.strip_prefix("test result: FAILED.").unwrap_or_else(|| ""));
     format!("{} {}", RGB(133, 138, 118).paint("stdout:"), message)
   } else if line.starts_with("test result: ok.") {
-    let failure = format!("test result: {}.", Green.paint("ok"));
-    let message = format!("{}{}", failure, line.strip_prefix("test result: ok.").unwrap_or_else(|| ""));
+    let test_result = format!("test result: {}.", Green.paint("ok"));
+    let message = format!("{}{}", test_result, line.strip_prefix("test result: ok.").unwrap_or_else(|| ""));
     format!("{} {}", RGB(133, 138, 118).paint("stdout:"), message)
   } else {
     default_stdout_line(line)
