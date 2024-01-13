@@ -30,7 +30,7 @@ fn main() -> JsonResult<()>{
           let line_with_decoding_error = format!("******************* Failed to decode Reason from this line: {}", Red.paint(&line));
           let reason: Reason = serde_json::from_str(&line).expect(&line_with_decoding_error);
 
-          //if  type of reason is compiler-message, then we want the full payload otherwise ignore?
+          //if type of reason is compiler-message, then we want the full payload otherwise ignore?
           // we also want the build-finished
           if reason.reason == "compiler-message" {
             let line_with_error = format!("******************* Failed to decode CompilerMessage from this line: {}", Red.paint(&line));
@@ -110,16 +110,24 @@ fn updated_stdout_line(line: &str) -> String {
   if line == "failures:" {
     format!("{} {}", RGB(133, 138, 118).paint("stdout:"), Red.paint(line))
   } else if line.starts_with("test result: FAILED.") {
-    let failure = format!("test result: {}.", Red.paint("FAILED"));
-    let message = format!("{}{}", failure, line.strip_prefix("test result: FAILED.").unwrap_or_else(|| ""));
-    format!("{} {}", RGB(133, 138, 118).paint("stdout:"), message)
+    print_test_failure(line)
   } else if line.starts_with("test result: ok.") {
-    let test_result = format!("test result: {}.", Green.paint("ok"));
-    let message = format!("{}{}", test_result, line.strip_prefix("test result: ok.").unwrap_or_else(|| ""));
-    format!("{} {}", RGB(133, 138, 118).paint("stdout:"), message)
+    print_test_success(line)
   } else {
     default_stdout_line(line)
   }
+}
+
+fn print_test_failure(line: &str) -> String {
+  let failure = format!("test result: {}.", Red.paint("FAILED"));
+  let message = format!("{}{}", failure, line.strip_prefix("test result: FAILED.").unwrap_or_else(|| ""));
+  format!("{} {}", RGB(133, 138, 118).paint("stdout:"), message)
+}
+
+fn print_test_success(line: &str) -> String {
+  let test_result = format!("test result: {}.", Green.paint("ok"));
+  let message = format!("{}{}", test_result, line.strip_prefix("test result: ok.").unwrap_or_else(|| ""));
+  format!("{} {}", RGB(133, 138, 118).paint("stdout:"), message)
 }
 
 fn default_stdout_line(line: &str) -> String {

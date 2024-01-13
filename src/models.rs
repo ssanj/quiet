@@ -26,11 +26,6 @@ impl std::fmt::Display for Reason {
 //Also need to be able to filter by file and error level. Eg. no warnings or only errors in x.rs
 //We also need to limit the number of errors displayed.
 
-enum CompilerOutput {
-  Status(BuildFinished),
-  Message(CompilerMessage)
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct BuildFinished {
   reason: String,
