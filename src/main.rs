@@ -1,11 +1,17 @@
 use std::{io::{self, BufRead}};
 use clap::Parser;
 use serde_json::Result as JsonResult;
-use crate::models::{CompilerMessage, Reason, Cli};
 use ansi_term::Colour::{Green, Red, Blue, RGB};
 use std::time::SystemTime;
 
-mod models;
+use cli::Cli;
+use compiler_message::CompilerMessage;
+use reason::Reason;
+
+mod reason;
+mod cli;
+mod build_finished;
+mod compiler_message;
 
 fn main() -> JsonResult<()>{
   let cli = Cli::parse();
@@ -108,7 +114,7 @@ fn main() -> JsonResult<()>{
 
 fn updated_stdout_line(line: &str) -> String {
   if line == "failures:" {
-    format!("{} {}", RGB(133, 138, 118).paint("stdout:"), Red.paint(line))
+    print_failures_line(line)
   } else if line.starts_with("test result: FAILED.") {
     print_test_failure(line)
   } else if line.starts_with("test result: ok.") {
@@ -116,6 +122,10 @@ fn updated_stdout_line(line: &str) -> String {
   } else {
     default_stdout_line(line)
   }
+}
+
+fn print_failures_line(line: &str) -> String {
+  format!("{} {}", RGB(133, 138, 118).paint("stdout:"), Red.paint(line))
 }
 
 fn print_test_failure(line: &str) -> String {
@@ -134,6 +144,9 @@ fn default_stdout_line(line: &str) -> String {
   format!("{} {}", RGB(133, 138, 118).paint("stdout:"), line)
 }
 
+/// Help identify the current execution of quiet by using a unique number for each execution.
+/// This can be useful for when you are fixing a lot of errors one by one, and have a lot of
+/// compilation errors on the screen.
 fn print_start_banner() {
   println!();
   let time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).map(|d| d.as_millis()).expect("EPOCH is before current time. What?!?");
