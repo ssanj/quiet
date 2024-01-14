@@ -7,10 +7,10 @@ use std::time::SystemTime;
 use cli::Cli;
 use compiler_message::CompilerMessage;
 use reason::Reason;
+use std::format as s;
 
 mod reason;
 mod cli;
-mod build_finished;
 mod compiler_message;
 
 fn main() -> JsonResult<()>{
@@ -20,34 +20,7 @@ fn main() -> JsonResult<()>{
   let show_warnings = cli.show_warnings;
   print_start_banner();
 
-  let stdin = io::stdin();
-
-  let matched: Vec<CompilerMessage> =
-    stdin.lock()
-      .lines()
-      .into_iter()
-      .filter_map(|line_result|{
-        let line = line_result.unwrap();
-        if !&line.starts_with("{") {
-          let new_line = updated_stdout_line(&line);
-          println!("{}", new_line);
-          None
-        } else {
-          let line_with_decoding_error = format!("******************* Failed to decode Reason from this line: {}", Red.paint(&line));
-          let reason: Reason = serde_json::from_str(&line).expect(&line_with_decoding_error);
-
-          //if type of reason is compiler-message, then we want the full payload otherwise ignore?
-          // we also want the build-finished
-          if reason.reason == "compiler-message" {
-            let line_with_error = format!("******************* Failed to decode CompilerMessage from this line: {}", Red.paint(&line));
-            // Dump out line if this result fails so we know where to look
-            let compiler_message: CompilerMessage = serde_json::from_str(&line).expect(&line_with_error);
-            Some(compiler_message)
-          } else {
-            None
-          }
-        }
-      }).collect();
+  let matched: Vec<CompilerMessage> = get_compiler_messages();
 
   let filtered_match  =
     match file_to_show_errors_for {
@@ -101,7 +74,7 @@ fn main() -> JsonResult<()>{
     let prefix = "*** No compilations errors";
     let message =
       if show_warnings {
-        format!("{} or warnings", prefix)
+        s!("{} or warnings", prefix)
       } else {
         prefix.to_owned()
       };
@@ -110,6 +83,51 @@ fn main() -> JsonResult<()>{
   }
 
   Ok(())
+}
+
+fn get_compiler_messages() -> Vec<CompilerMessage> {
+  io::stdin()
+    .lock()
+    .lines()
+    .into_iter()
+    .filter_map(|line_result|{
+      let line = line_result.unwrap();
+      // if it's not a JSON payload
+      if !&line.starts_with("{") {
+        // Maybe use an ADT and tag this as StdoutMessage vs JsonMessage
+        passthrough_stdout_line(line.as_str());
+        None
+      } else {
+        let reason: Reason = decode_reason(line.as_str());
+
+        //if type of reason is compiler-message, then we want the full payload otherwise ignore.
+        if reason.reason == "compiler-message" {
+          let compiler_message = decode_compiler_message(line.as_str());
+          Some(compiler_message)
+        } else {
+          None
+        }
+      }
+    }).collect()
+}
+
+fn passthrough_stdout_line(line: &str) {
+  let new_line = updated_stdout_line(&line);
+  println!("{}", new_line);
+}
+
+
+fn decode_reason(line: &str) -> Reason {
+  let line_with_decoding_error = s!("******************* Failed to decode Reason from this line: {}", Red.paint(line));
+
+  serde_json::from_str(&line).expect(&line_with_decoding_error)
+}
+
+
+fn decode_compiler_message(line: &str) -> CompilerMessage {
+  let line_with_error = s!("******************* Failed to decode CompilerMessage from this line: {}", Red.paint(line));
+  // Dump out line if this result fails so we know where to look
+  serde_json::from_str(&line).expect(&line_with_error)
 }
 
 fn updated_stdout_line(line: &str) -> String {
@@ -125,23 +143,23 @@ fn updated_stdout_line(line: &str) -> String {
 }
 
 fn print_failures_line(line: &str) -> String {
-  format!("{} {}", RGB(133, 138, 118).paint("stdout:"), Red.paint(line))
+  s!("{} {}", RGB(133, 138, 118).paint("stdout:"), Red.paint(line))
 }
 
 fn print_test_failure(line: &str) -> String {
-  let failure = format!("test result: {}.", Red.paint("FAILED"));
-  let message = format!("{}{}", failure, line.strip_prefix("test result: FAILED.").unwrap_or_else(|| ""));
-  format!("{} {}", RGB(133, 138, 118).paint("stdout:"), message)
+  let failure = s!("test result: {}.", Red.paint("FAILED"));
+  let message = s!("{}{}", failure, line.strip_prefix("test result: FAILED.").unwrap_or_else(|| ""));
+  s!("{} {}", RGB(133, 138, 118).paint("stdout:"), message)
 }
 
 fn print_test_success(line: &str) -> String {
-  let test_result = format!("test result: {}.", Green.paint("ok"));
-  let message = format!("{}{}", test_result, line.strip_prefix("test result: ok.").unwrap_or_else(|| ""));
-  format!("{} {}", RGB(133, 138, 118).paint("stdout:"), message)
+  let test_result = s!("test result: {}.", Green.paint("ok"));
+  let message = s!("{}{}", test_result, line.strip_prefix("test result: ok.").unwrap_or_else(|| ""));
+  s!("{} {}", RGB(133, 138, 118).paint("stdout:"), message)
 }
 
 fn default_stdout_line(line: &str) -> String {
-  format!("{} {}", RGB(133, 138, 118).paint("stdout:"), line)
+  s!("{} {}", RGB(133, 138, 118).paint("stdout:"), line)
 }
 
 /// Help identify the current execution of quiet by using a unique number for each execution.
@@ -150,7 +168,7 @@ fn default_stdout_line(line: &str) -> String {
 fn print_start_banner() {
   println!();
   let time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).map(|d| d.as_millis()).expect("EPOCH is before current time. What?!?");
-  let time_str = format!("{}", time);
+  let time_str = s!("{}", time);
   let id: String =
     time_str
       .chars()
@@ -158,6 +176,6 @@ fn print_start_banner() {
       .take(7)
       .collect();
 
-  let id_string = format!("---------- quiet [{}]----------", id);
+  let id_string = s!("---------- quiet [{}]----------", id);
   println!("{}", Blue.paint(id_string));
 }
