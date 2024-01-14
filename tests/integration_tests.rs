@@ -1,5 +1,4 @@
 use assert_cmd::Command;
-use assert_cmd::{cargo::CommandCargoExt, assert::OutputAssertExt, output::OutputOkExt};
 use predicates::prelude::predicate;
 use std::{println as p, format as s};
 use std::path::Path;
@@ -10,13 +9,58 @@ enum AssertionType<'a> {
 }
 
 #[test]
-fn without_any_errors() {
+fn no_errors_1() {
   let stdout_lines =
     [
       AssertionType::Contains("quiet"),
       AssertionType::Contains("*** No compilations errors"),
     ];
-  run_quiet("no-errors.txt", &stdout_lines)
+  run_quiet("no-errors-1.txt", &stdout_lines)
+}
+
+#[test]
+fn no_errors_2() {
+  let stdout_lines =
+    [
+      AssertionType::Contains("quiet"),
+      AssertionType::Contains("*** No compilations errors"),
+    ];
+  run_quiet("no-errors-2.txt", &stdout_lines)
+}
+
+#[test]
+fn no_errors_3() {
+  let stdout_lines =
+    [
+      AssertionType::Contains("quiet"),
+      AssertionType::Contains("*** No compilations errors"),
+    ];
+  run_quiet("no-errors-3.txt", &stdout_lines)
+}
+
+#[test]
+fn no_errors_4() {
+  let stdout_lines =
+    [
+      AssertionType::Contains("quiet"),
+      AssertionType::Contains("*** No compilations errors"),
+    ];
+  run_quiet("no-errors-4.txt", &stdout_lines)
+}
+
+#[test]
+fn errors_1() {
+  let stdout_lines =
+    [
+      AssertionType::Contains("quiet"),
+      AssertionType::Contains("*** /Volumes/Work/projects/code/rust/toy/purs/src/main.rs >>> error[E0412]: cannot find type `PullRequest` in this scope"),
+      AssertionType::Contains("--> src/model.rs:68:23"),
+      AssertionType::DoesNotContain("--> src/github.rs:15:69"),  // second error
+      AssertionType::DoesNotContain("--> src/github.rs:88:23"),  // third error
+      AssertionType::DoesNotContain("--> src/github.rs:114:36"), // fourth error
+      AssertionType::DoesNotContain("--> src/main.rs:56:32"),    // fifth error
+    ];
+  run_quiet("errors-1.txt", &stdout_lines)
 }
 
 fn run_quiet<P: AsRef<Path>>(cargo_output_file: P, stdout_assertions: &[AssertionType]) {
@@ -28,6 +72,7 @@ fn run_quiet<P: AsRef<Path>>(cargo_output_file: P, stdout_assertions: &[Assertio
       let output = std::str::from_utf8(out).expect("Could not convert stdout to string");
 
       let result = output.contains(owned_expected.as_str());
+      // Only print this if the result is not what we expect, otherwise this will get printed for any test failure.
       if !result {
         // This only gets printed if the test fails.
         p!(">>> stdout: {}\n>>> did not contain: '{}'\n", output, owned_expected.as_str());
@@ -47,8 +92,7 @@ fn run_quiet<P: AsRef<Path>>(cargo_output_file: P, stdout_assertions: &[Assertio
         p!(">>> stdout: {}\n>>> contained: '{}'\n", output, owned_expected.as_str());
       }
 
-      //result
-      false
+      result
     })
   };
 
@@ -98,7 +142,7 @@ fn run_quiet<P: AsRef<Path>>(cargo_output_file: P, stdout_assertions: &[Assertio
   for line in lines_should_not_exist{
     asserts =
       asserts
-        .stderr(stdout_does_not_contain(line));
+        .stdout(stdout_does_not_contain(line));
   }
 }
 
