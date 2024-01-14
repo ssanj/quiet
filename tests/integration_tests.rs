@@ -3,10 +3,12 @@ use predicates::prelude::predicate;
 use std::{println as p, format as s};
 use std::path::Path;
 
+
 enum AssertionType<'a> {
   Contains(&'a str),
   DoesNotContain(&'a str),
 }
+
 
 #[test]
 fn no_errors_1() {
@@ -18,6 +20,7 @@ fn no_errors_1() {
   run_quiet("no-errors-1.txt", &stdout_lines)
 }
 
+
 #[test]
 fn no_errors_2() {
   let stdout_lines =
@@ -27,6 +30,7 @@ fn no_errors_2() {
     ];
   run_quiet("no-errors-2.txt", &stdout_lines)
 }
+
 
 #[test]
 fn no_errors_3() {
@@ -38,6 +42,7 @@ fn no_errors_3() {
   run_quiet("no-errors-3.txt", &stdout_lines)
 }
 
+
 #[test]
 fn no_errors_4() {
   let stdout_lines =
@@ -48,11 +53,13 @@ fn no_errors_4() {
   run_quiet("no-errors-4.txt", &stdout_lines)
 }
 
+
 #[test]
 fn errors_1() {
   let stdout_lines =
     [
       AssertionType::Contains("quiet"),
+      AssertionType::DoesNotContain("*** No compilations errors"),
       AssertionType::Contains("*** /Volumes/Work/projects/code/rust/toy/purs/src/main.rs >>> error[E0412]: cannot find type `PullRequest` in this scope"),
       AssertionType::Contains("--> src/model.rs:68:23"),
       AssertionType::DoesNotContain("--> src/github.rs:15:69"),  // second error
@@ -62,6 +69,7 @@ fn errors_1() {
     ];
   run_quiet("errors-1.txt", &stdout_lines)
 }
+
 
 #[test]
 fn no_errors_tests() {
@@ -82,6 +90,39 @@ fn no_errors_tests() {
 }
 
 
+#[test]
+fn errors_tests() {
+  let stdout_lines =
+    [
+      AssertionType::Contains("quiet"),
+      AssertionType::Contains("*** No compilations errors"),
+      AssertionType::Contains("running 49 tests"),
+      AssertionType::Contains("49 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s"),
+      AssertionType::Contains("running 12 tests"),
+      AssertionType::Contains("12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s"),
+      AssertionType::Contains("running 8 tests"),
+      AssertionType::Contains("7 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s"),
+      AssertionType::Contains("runs_a_simple_template_with_shell_hook"),
+      AssertionType::Contains("FAILED"),
+    ];
+  run_quiet("errors-tests.txt", &stdout_lines)
+}
+
+
+#[test]
+fn compilation_errors_tests() {
+  let stdout_lines =
+    [
+      AssertionType::Contains("quiet"),
+      AssertionType::DoesNotContain("*** No compilations errors"),
+      AssertionType::Contains("*** /Volumes/Work/code/rust/toy/zat/tests/errors_integration_tests.rs >>>"),
+      AssertionType::Contains("tests/errors_integration_tests.rs:171:67"),
+      AssertionType::Contains("expected `;`, found keyword `let`"),
+    ];
+  run_quiet("compilation-errors-tests.txt", &stdout_lines)
+}
+
+
 fn run_quiet<P: AsRef<Path>>(cargo_output_file: P, stdout_assertions: &[AssertionType]) {
   let mut cmd = Command::cargo_bin("quiet").unwrap();
 
@@ -99,6 +140,7 @@ fn run_quiet<P: AsRef<Path>>(cargo_output_file: P, stdout_assertions: &[Assertio
       result
     })
   };
+
 
   let stdout_does_not_contain = |expected: &str| {
     let owned_expected = expected.to_owned();
@@ -164,6 +206,7 @@ fn run_quiet<P: AsRef<Path>>(cargo_output_file: P, stdout_assertions: &[Assertio
         .stdout(stdout_does_not_contain(line));
   }
 }
+
 
 fn get_example_file<P: AsRef<Path>>(file: P) -> String {
   let current_directory = std::env::current_dir().expect("Could not get current directory");
