@@ -63,6 +63,25 @@ fn errors_1() {
   run_quiet("errors-1.txt", &stdout_lines)
 }
 
+#[test]
+fn no_errors_tests() {
+  let stdout_lines =
+    [
+      AssertionType::Contains("quiet"),
+      AssertionType::Contains("*** No compilations errors"),
+      AssertionType::Contains("running 49 tests"),
+      AssertionType::Contains("49 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.26s"),
+      AssertionType::Contains("running 12 tests"),
+      AssertionType::Contains("12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.27s"),
+      AssertionType::Contains("running 8 tests"),
+      AssertionType::Contains("8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s"),
+      AssertionType::Contains("running 0 tests"),
+      AssertionType::Contains("0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"),
+    ];
+  run_quiet("no-errors-tests.txt", &stdout_lines)
+}
+
+
 fn run_quiet<P: AsRef<Path>>(cargo_output_file: P, stdout_assertions: &[AssertionType]) {
   let mut cmd = Command::cargo_bin("quiet").unwrap();
 
