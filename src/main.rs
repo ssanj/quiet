@@ -18,11 +18,92 @@ fn main() -> JsonResult<()>{
   let errors_to_show = cli.errors as usize;
   let file_to_show_errors_for = cli.file_filter;
   let show_warnings = cli.show_warnings;
+
   print_start_banner();
 
   let matched: Vec<CompilerMessage> = get_compiler_messages();
+  let filtered_match = filter_by_filename(file_to_show_errors_for, matched);
+  let filtered_by_level = filter_by_level(filtered_match);
+  let constrained_matches: Vec<CompilerMessage> =
+    get_constrained_by_number(filtered_by_level, errors_to_show as usize, show_warnings);
 
-  let filtered_match  =
+  print_compiler_output(constrained_matches, show_warnings);
+
+  Ok(())
+}
+
+enum LevelType {
+  ErrorLevel(CompilerMessage),
+  WarningLevel(CompilerMessage),
+}
+
+fn print_compiler_output(constrained_matches: Vec<CompilerMessage>, show_warnings: bool) {
+  // We could have mapped to get the output Strings and then counted + printed. But there's no good reason to.
+  // Using a mut here is simpler and Rust gives us the guarantees we need.
+  let mut printed_items = 0;
+  constrained_matches
+    .into_iter()
+    .for_each(|compiler_message|{
+      println!("*** {} >>> {}", compiler_message.target.src_path, compiler_message.message.rendered);
+      printed_items += 1;
+    });
+
+  if printed_items == 0 {
+    let prefix = "*** No compilations errors";
+    let message =
+      if show_warnings {
+        s!("{} or warnings", prefix)
+      } else {
+        prefix.to_owned()
+      };
+
+    println!("{}", Green.paint(message))
+  }
+}
+
+fn filter_by_level(filtered_match: Vec<CompilerMessage>) -> Vec<LevelType> {
+  filtered_match
+    .into_iter()
+    .filter_map(|i| {
+      let level = &i.message.level;
+      match level.as_str() {
+        "error"   => Some(LevelType::ErrorLevel(i)),
+        "warning" => Some(LevelType::WarningLevel(i)),
+        _         => None
+      }
+    })
+    .collect()
+}
+
+fn get_constrained_by_number(filtered_by_level: Vec<LevelType>, errors_to_show: usize, show_warnings: bool) -> Vec<CompilerMessage> {
+  if !show_warnings {
+    // Errors only
+    filtered_by_level
+      .into_iter()
+      .filter_map(|lt| {
+        match lt {
+          LevelType::ErrorLevel(cm) => Some(cm),
+          _                         => None,
+        }
+      })
+      .take(errors_to_show)
+      .collect()
+  } else {
+    // Both errors and warnings
+    filtered_by_level
+      .into_iter()
+      .map(|lt|{
+        match lt {
+          LevelType::ErrorLevel(cm)   => cm,
+          LevelType::WarningLevel(cm) => cm,
+        }
+      })
+      .take(errors_to_show) // TODO: Accept a separate number of warnings to show?
+      .collect()
+  }
+}
+
+fn filter_by_filename(file_to_show_errors_for: Option<String>, matched: Vec<CompilerMessage>) -> Vec<CompilerMessage> {
     match file_to_show_errors_for {
       Some(file_name_filter) => {
         matched
@@ -45,44 +126,7 @@ fn main() -> JsonResult<()>{
           .collect::<Vec<_>>()
       },
       None => matched
-    };
-
-   let errors_only =
-    filtered_match
-      .into_iter()
-      .filter(|i| {
-        let level = &i.message.level;
-        let default_level = "error";
-        if show_warnings {
-          level == default_level || level == "warning"
-        } else {
-          level == default_level
-        }
-      })
-      .take(errors_to_show);
-
-  // We could have mapped to get the output Strings and then counted + printed. But there's no good reason to.
-  // Using a mut here is simpler and Rust gives us the guarantees we need.
-  let mut printed_items = 0;
-  errors_only
-      .for_each(|compiler_message|{
-        println!("*** {} >>> {}", compiler_message.target.src_path, compiler_message.message.rendered);
-        printed_items += 1;
-      });
-
-  if printed_items == 0 {
-    let prefix = "*** No compilations errors";
-    let message =
-      if show_warnings {
-        s!("{} or warnings", prefix)
-      } else {
-        prefix.to_owned()
-      };
-
-    println!("{}", Green.paint(message))
-  }
-
-  Ok(())
+    }
 }
 
 fn get_compiler_messages() -> Vec<CompilerMessage> {
