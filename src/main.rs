@@ -1,7 +1,7 @@
 use std::{io::{self, BufRead}};
 use clap::Parser;
 use serde_json::Result as JsonResult;
-use ansi_term::Colour::{Green, Red, Blue, RGB};
+use ansi_term::Colour::{Green, Red, Blue, RGB, Yellow};
 use std::time::SystemTime;
 
 use cli::Cli;
@@ -25,12 +25,47 @@ fn main() -> JsonResult<()>{
   let matched: Vec<CompilerMessage> = get_compiler_messages();
   let filtered_match: Vec<CompilerMessage> = filter_by_filename(file_to_show_errors_for, matched);
   let filtered_by_level: Vec<LevelType> = filter_by_level(filtered_match);
+  let level_status: LevelStatus = get_level_status(&filtered_by_level);
+
   let constrained_matches: Vec<CompilerMessage> =
     get_constrained_by_number(filtered_by_level, items_to_show, show_warnings);
 
-  print_compiler_output(constrained_matches, show_warnings);
+  print_compiler_output(constrained_matches, level_status);
 
   Ok(())
+}
+
+
+fn get_level_status(filtered_by_level: &[LevelType]) -> LevelStatus {
+  let init =
+    LevelStatus {
+      errors: false,
+      warnings: false,
+    };
+
+  let result =
+    filtered_by_level
+      .iter()
+      .fold(init, |acc, v| {
+        match v {
+          LevelType::ErrorLevel(_) => {
+            if !acc.errors {
+              acc.copy_errors(true)
+            } else {
+              acc
+            }
+          },
+          LevelType::WarningLevel(_) => {
+            if !acc.warnings {
+              acc.copy_warnings(true)
+            } else {
+              acc
+            }
+          },
+        }
+      });
+
+  result
 }
 
 
@@ -39,30 +74,52 @@ enum LevelType {
   WarningLevel(CompilerMessage),
 }
 
+struct LevelStatus {
+  errors: bool,
+  warnings: bool
+}
 
-fn print_compiler_output(constrained_matches: Vec<CompilerMessage>, show_warnings: bool) {
-  // TODO: We should also check for only warnings.
-  let no_issues = constrained_matches.is_empty();
+impl LevelStatus {
+  fn copy_errors(self, new_errors: bool) -> Self {
+    Self {
+      errors: new_errors,
+      warnings: self.warnings
+    }
+  }
 
+  fn copy_warnings(self, new_warnings: bool) -> Self {
+    Self {
+      errors: self.errors,
+      warnings: new_warnings
+    }
+  }
+}
+
+enum OutputType<'a> {
+  Error(&'a str),
+  Warning(&'a str),
+  Success(&'a str),
+}
+
+fn print_compiler_output(constrained_matches: Vec<CompilerMessage>, level_status: LevelStatus) {
   constrained_matches
     .into_iter()
     .for_each(|compiler_message|{
       println!("*** {} >>> {}", compiler_message.target.src_path, compiler_message.message.rendered)
     });
 
-  if no_issues {
-    let prefix = "*** No compilations errors ***";
-    let message =
-      if show_warnings {
-        s!("{} or warnings", prefix)
-      } else {
-        prefix.to_owned()
-      };
+  let output_type =
+    match (level_status.errors, level_status.warnings) {
+      (true, true)  => OutputType::Error("!!! There are compilation errors and warnings !!!"),
+      (true, false) => OutputType::Error("!!! There are compilation errors !!!"),
+      (false, true) => OutputType::Warning("*** No compilation errors (but there are warnings) ***"),
+      (false, false) => OutputType::Success("*** No compilation errors (or warnings) ***"),
+    };
 
-    println!("{}", Green.paint(message))
-  } else {
-    let message = "!!! We have compilation errors !!!";
-    println!("{}", Red.paint(message))
+  match output_type {
+    OutputType::Error(m)   => println!("{}", Red.paint(m)),
+    OutputType::Warning(m) => println!("{}", Yellow.paint(m)),
+    OutputType::Success(m) => println!("{}", Green.paint(m)),
   }
 }
 
@@ -82,7 +139,7 @@ fn filter_by_level(filtered_match: Vec<CompilerMessage>) -> Vec<LevelType> {
 }
 
 
-fn get_constrained_by_number(filtered_by_level: Vec<LevelType>, items_to_show: usize, show_warnings: bool) -> Vec<CompilerMessage> {
+fn get_constrained_by_number(mut filtered_by_level: Vec<LevelType>, items_to_show: usize, show_warnings: bool) -> Vec<CompilerMessage> {
   if !show_warnings {
     // Errors only
     filtered_by_level
@@ -96,17 +153,26 @@ fn get_constrained_by_number(filtered_by_level: Vec<LevelType>, items_to_show: u
       .take(items_to_show)
       .collect()
   } else {
-    // Both errors and warnings
-    filtered_by_level
-      .into_iter()
-      .map(|lt|{
+      // Both errors and warnings
+      // Sort with errors first, then warnings
+      filtered_by_level
+      .sort_by_key(|lt|{
         match lt {
-          LevelType::ErrorLevel(cm)   => cm,
-          LevelType::WarningLevel(cm) => cm,
+          LevelType::ErrorLevel(_)   => 0,
+          LevelType::WarningLevel(_) => 1
         }
-      })
-      .take(items_to_show) // TODO: Accept a separate number of warnings to show?
-      .collect()
+      });
+
+      filtered_by_level
+        .into_iter()
+        .map(|lt|{
+          match lt {
+            LevelType::ErrorLevel(cm)   => cm,
+            LevelType::WarningLevel(cm) => cm,
+          }
+        })
+        .take(items_to_show) // TODO: Accept a separate number of warnings to show?
+        .collect()
   }
 }
 

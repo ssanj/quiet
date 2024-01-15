@@ -15,7 +15,7 @@ fn no_errors_1() {
   let stdout_lines =
     [
       AssertionType::Contains("quiet"),
-      AssertionType::Contains("*** No compilations errors"),
+      AssertionType::Contains("*** No compilation errors"),
     ];
   run_quiet("no-errors-1.txt", &stdout_lines)
 }
@@ -26,7 +26,7 @@ fn no_errors_2() {
   let stdout_lines =
     [
       AssertionType::Contains("quiet"),
-      AssertionType::Contains("*** No compilations errors"),
+      AssertionType::Contains("*** No compilation errors"),
     ];
   run_quiet("no-errors-2.txt", &stdout_lines)
 }
@@ -37,7 +37,7 @@ fn no_errors_3() {
   let stdout_lines =
     [
       AssertionType::Contains("quiet"),
-      AssertionType::Contains("*** No compilations errors"),
+      AssertionType::Contains("*** No compilation errors"),
     ];
   run_quiet("no-errors-3.txt", &stdout_lines)
 }
@@ -48,7 +48,7 @@ fn no_errors_4() {
   let stdout_lines =
     [
       AssertionType::Contains("quiet"),
-      AssertionType::Contains("*** No compilations errors"),
+      AssertionType::Contains("*** No compilation errors"),
     ];
   run_quiet("no-errors-4.txt", &stdout_lines)
 }
@@ -59,7 +59,7 @@ fn errors_1() {
   let stdout_lines =
     [
       AssertionType::Contains("quiet"),
-      AssertionType::DoesNotContain("*** No compilations errors"),
+      AssertionType::DoesNotContain("*** No compilation errors"),
       AssertionType::Contains("*** /Volumes/Work/projects/code/rust/toy/purs/src/main.rs >>> error[E0412]: cannot find type `PullRequest` in this scope"),
       AssertionType::Contains("--> src/model.rs:68:23"),
       AssertionType::DoesNotContain("--> src/github.rs:15:69"),  // second error
@@ -76,7 +76,7 @@ fn no_errors_tests() {
   let stdout_lines =
     [
       AssertionType::Contains("quiet"),
-      AssertionType::Contains("*** No compilations errors"),
+      AssertionType::Contains("*** No compilation errors"),
       AssertionType::Contains("running 49 tests"),
       AssertionType::Contains("49 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.26s"),
       AssertionType::Contains("running 12 tests"),
@@ -95,7 +95,7 @@ fn errors_tests() {
   let stdout_lines =
     [
       AssertionType::Contains("quiet"),
-      AssertionType::Contains("*** No compilations errors"),
+      AssertionType::Contains("*** No compilation errors"),
       AssertionType::Contains("running 49 tests"),
       AssertionType::Contains("49 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s"),
       AssertionType::Contains("running 12 tests"),
