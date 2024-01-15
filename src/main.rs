@@ -22,8 +22,8 @@ fn main() -> JsonResult<()>{
   print_start_banner();
 
   let matched: Vec<CompilerMessage> = get_compiler_messages();
-  let filtered_match = filter_by_filename(file_to_show_errors_for, matched);
-  let filtered_by_level = filter_by_level(filtered_match);
+  let filtered_match: Vec<CompilerMessage> = filter_by_filename(file_to_show_errors_for, matched);
+  let filtered_by_level: Vec<LevelType> = filter_by_level(filtered_match);
   let constrained_matches: Vec<CompilerMessage> =
     get_constrained_by_number(filtered_by_level, errors_to_show as usize, show_warnings);
 
@@ -38,18 +38,17 @@ enum LevelType {
 }
 
 fn print_compiler_output(constrained_matches: Vec<CompilerMessage>, show_warnings: bool) {
-  // We could have mapped to get the output Strings and then counted + printed. But there's no good reason to.
-  // Using a mut here is simpler and Rust gives us the guarantees we need.
-  let mut printed_items = 0;
+  // TODO: We should also check for only warnings.
+  let no_issues = constrained_matches.is_empty();
+
   constrained_matches
     .into_iter()
     .for_each(|compiler_message|{
-      println!("*** {} >>> {}", compiler_message.target.src_path, compiler_message.message.rendered);
-      printed_items += 1;
+      println!("*** {} >>> {}", compiler_message.target.src_path, compiler_message.message.rendered)
     });
 
-  if printed_items == 0 {
-    let prefix = "*** No compilations errors";
+  if no_issues {
+    let prefix = "*** No compilations errors ***";
     let message =
       if show_warnings {
         s!("{} or warnings", prefix)
@@ -58,6 +57,9 @@ fn print_compiler_output(constrained_matches: Vec<CompilerMessage>, show_warning
       };
 
     println!("{}", Green.paint(message))
+  } else {
+    let message = "!!! We have compilation errors !!!";
+    println!("{}", Red.paint(message))
   }
 }
 
