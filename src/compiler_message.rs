@@ -1,16 +1,19 @@
 use serde::{Serialize, Deserialize};
 
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompilerMessage {
   pub target: CompilerMessageTarget,
   pub message: CompilerMessageMessage,
 }
 
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompilerMessageTarget {
   pub name: String,
   pub src_path: String
 }
+
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompilerMessageMessage {
@@ -20,6 +23,7 @@ pub struct CompilerMessageMessage {
   pub message: String,
   pub spans: Vec<CompilerMessageSpan>
 }
+
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompilerMessageCode {

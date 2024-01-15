@@ -13,9 +13,10 @@ mod reason;
 mod cli;
 mod compiler_message;
 
+
 fn main() -> JsonResult<()>{
   let cli = Cli::parse();
-  let errors_to_show = cli.errors as usize;
+  let items_to_show = cli.items as usize;
   let file_to_show_errors_for = cli.file_filter;
   let show_warnings = cli.show_warnings;
 
@@ -25,17 +26,19 @@ fn main() -> JsonResult<()>{
   let filtered_match: Vec<CompilerMessage> = filter_by_filename(file_to_show_errors_for, matched);
   let filtered_by_level: Vec<LevelType> = filter_by_level(filtered_match);
   let constrained_matches: Vec<CompilerMessage> =
-    get_constrained_by_number(filtered_by_level, errors_to_show as usize, show_warnings);
+    get_constrained_by_number(filtered_by_level, items_to_show, show_warnings);
 
   print_compiler_output(constrained_matches, show_warnings);
 
   Ok(())
 }
 
+
 enum LevelType {
   ErrorLevel(CompilerMessage),
   WarningLevel(CompilerMessage),
 }
+
 
 fn print_compiler_output(constrained_matches: Vec<CompilerMessage>, show_warnings: bool) {
   // TODO: We should also check for only warnings.
@@ -63,6 +66,7 @@ fn print_compiler_output(constrained_matches: Vec<CompilerMessage>, show_warning
   }
 }
 
+
 fn filter_by_level(filtered_match: Vec<CompilerMessage>) -> Vec<LevelType> {
   filtered_match
     .into_iter()
@@ -77,7 +81,8 @@ fn filter_by_level(filtered_match: Vec<CompilerMessage>) -> Vec<LevelType> {
     .collect()
 }
 
-fn get_constrained_by_number(filtered_by_level: Vec<LevelType>, errors_to_show: usize, show_warnings: bool) -> Vec<CompilerMessage> {
+
+fn get_constrained_by_number(filtered_by_level: Vec<LevelType>, items_to_show: usize, show_warnings: bool) -> Vec<CompilerMessage> {
   if !show_warnings {
     // Errors only
     filtered_by_level
@@ -88,7 +93,7 @@ fn get_constrained_by_number(filtered_by_level: Vec<LevelType>, errors_to_show: 
           _                         => None,
         }
       })
-      .take(errors_to_show)
+      .take(items_to_show)
       .collect()
   } else {
     // Both errors and warnings
@@ -100,10 +105,11 @@ fn get_constrained_by_number(filtered_by_level: Vec<LevelType>, errors_to_show: 
           LevelType::WarningLevel(cm) => cm,
         }
       })
-      .take(errors_to_show) // TODO: Accept a separate number of warnings to show?
+      .take(items_to_show) // TODO: Accept a separate number of warnings to show?
       .collect()
   }
 }
+
 
 fn filter_by_filename(file_to_show_errors_for: Option<String>, matched: Vec<CompilerMessage>) -> Vec<CompilerMessage> {
     match file_to_show_errors_for {
@@ -131,6 +137,7 @@ fn filter_by_filename(file_to_show_errors_for: Option<String>, matched: Vec<Comp
     }
 }
 
+
 fn get_compiler_messages() -> Vec<CompilerMessage> {
   io::stdin()
     .lock()
@@ -157,6 +164,7 @@ fn get_compiler_messages() -> Vec<CompilerMessage> {
     }).collect()
 }
 
+
 fn passthrough_stdout_line(line: &str) {
   let new_line = updated_stdout_line(&line);
   println!("{}", new_line);
@@ -176,6 +184,7 @@ fn decode_compiler_message(line: &str) -> CompilerMessage {
   serde_json::from_str(&line).expect(&line_with_error)
 }
 
+
 fn updated_stdout_line(line: &str) -> String {
   if line == "failures:" {
     print_failures_line(line)
@@ -188,15 +197,18 @@ fn updated_stdout_line(line: &str) -> String {
   }
 }
 
+
 fn print_failures_line(line: &str) -> String {
   s!("{} {}", RGB(133, 138, 118).paint("stdout:"), Red.paint(line))
 }
+
 
 fn print_test_failure(line: &str) -> String {
   let failure = s!("test result: {}.", Red.paint("FAILED"));
   let message = s!("{}{}", failure, line.strip_prefix("test result: FAILED.").unwrap_or_else(|| ""));
   s!("{} {}", RGB(133, 138, 118).paint("stdout:"), message)
 }
+
 
 fn print_test_success(line: &str) -> String {
   let test_result = s!("test result: {}.", Green.paint("ok"));
@@ -207,6 +219,7 @@ fn print_test_success(line: &str) -> String {
 fn default_stdout_line(line: &str) -> String {
   s!("{} {}", RGB(133, 138, 118).paint("stdout:"), line)
 }
+
 
 /// Help identify the current execution of quiet by using a unique number for each execution.
 /// This can be useful for when you are fixing a lot of errors one by one, and have a lot of

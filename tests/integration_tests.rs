@@ -165,7 +165,7 @@ fn run_quiet<P: AsRef<Path>>(cargo_output_file: P, stdout_assertions: &[Assertio
   let input = std::str::from_utf8(&cargo_output).expect("Could not decode output");
 
   cmd
-    .arg("--errors")
+    .arg("--items")
     .arg("1")
     .write_stdin(input);
 
