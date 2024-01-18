@@ -8,10 +8,13 @@ use cli::Cli;
 use compiler_message::CompilerMessage;
 use reason::Reason;
 use std::format as s;
+use itertools::Itertools;
+use rendered::Rendered;
 
 mod reason;
 mod cli;
 mod compiler_message;
+mod rendered;
 
 
 fn main() -> JsonResult<()>{
@@ -68,7 +71,7 @@ fn get_level_status(filtered_by_level: &[LevelType]) -> LevelStatus {
   result
 }
 
-
+#[derive(Debug, Clone, PartialEq)]
 enum LevelType {
   ErrorLevel(CompilerMessage),
   WarningLevel(CompilerMessage),
@@ -163,15 +166,25 @@ fn get_constrained_by_number(mut filtered_by_level: Vec<LevelType>, items_to_sho
         }
       });
 
+      // The warnings returned by the Cargo JSON have duplicate elements.
+      // We convert them to Rendered to allow us to remove duplicated with the same rendered output.
       filtered_by_level
         .into_iter()
-        .map(|lt|{
+        .filter_map(|lt|{
           match lt {
-            LevelType::ErrorLevel(cm)   => cm,
-            LevelType::WarningLevel(cm) => cm,
+            LevelType::ErrorLevel(cm)   => Some(Rendered::new(cm)),
+            LevelType::WarningLevel(cm) => {
+              if cm.message.message.contains("warning emitted") { // Also remove messages that say "warning emitted"
+                None
+              } else {
+                Some(Rendered::new(cm))
+              }
+            },
           }
         })
-        .take(items_to_show) // TODO: Accept a separate number of warnings to show?
+        .unique() // Removes duplicates
+        .map(|r| r.items)
+        .take(items_to_show)
         .collect()
   }
 }
@@ -232,8 +245,9 @@ fn get_compiler_messages() -> Vec<CompilerMessage> {
 
 
 fn passthrough_stdout_line(line: &str) {
-  let new_line = updated_stdout_line(&line);
-  println!("{}", new_line);
+  if let Some(new_line) = updated_stdout_line(&line) {
+    println!("{}", new_line)
+  }
 }
 
 
@@ -251,18 +265,24 @@ fn decode_compiler_message(line: &str) -> CompilerMessage {
 }
 
 
-fn updated_stdout_line(line: &str) -> String {
+fn updated_stdout_line(line: &str) -> Option<String> {
   if line == "failures:" {
-    print_failures_line(line)
+    Some(print_failures_line(line))
   } else if line.starts_with("test result: FAILED.") {
-    print_test_failure(line)
+    Some(print_test_failure(line))
   } else if line.starts_with("test result: ok.") {
-    print_test_success(line)
+    Some(print_test_success(line))
+  } else if line.split_inclusive(".").count() == line.len()  {
+    Some(print_test_run_dots(line))
   } else {
-    default_stdout_line(line)
+    Some(default_stdout_line(line))
   }
 }
 
+
+fn print_test_run_dots(line: &str) -> String {
+  s!("{}", Green.paint(line))
+}
 
 fn print_failures_line(line: &str) -> String {
   s!("{} {}", RGB(133, 138, 118).paint("stdout:"), Red.paint(line))
