@@ -237,8 +237,14 @@ fn get_compiler_messages() -> Vec<CompilerMessage> {
             Ok(reason) => {
               //if type of reason is compiler-message, then we want the full payload otherwise ignore.
               if reason.reason == "compiler-message" {
-                let compiler_message = decode_compiler_message(line.as_str());
-                Some(compiler_message)
+                match decode_compiler_message(line.as_str()) {
+                   Result::Ok(cm) => Some(cm),
+                   Result::Err(e) => {
+                      let line_with_error = s!("******************* Failed to decode CompilerMessage from this line: {}\ncause: {}", Red.paint(line), e.to_string());
+                    println!("{}", line_with_error);
+                    None
+                   }
+                }
               } else {
                 None
               }
@@ -266,10 +272,8 @@ fn decode_reason(line: &str) -> serde_json::Result<Reason> {
 }
 
 
-fn decode_compiler_message(line: &str) -> CompilerMessage {
-  let line_with_error = s!("******************* Failed to decode CompilerMessage from this line: {}", Red.paint(line));
-  // Dump out line if this result fails so we know where to look
-  serde_json::from_str(&line).expect(&line_with_error)
+fn decode_compiler_message(line: &str) -> serde_json::Result<CompilerMessage> {
+  serde_json::from_str(&line)
 }
 
 // TODO: Refactor this spaghetti code

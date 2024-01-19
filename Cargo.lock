@@ -343,7 +343,7 @@ dependencies = [
 
 [[package]]
 name = "quiet"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "ansi_term",
  "assert_cmd",
