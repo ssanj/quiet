@@ -120,9 +120,9 @@ fn print_compiler_output(constrained_matches: Vec<CompilerMessage>, level_status
     };
 
   match output_type {
-    OutputType::Error(m)   => println!("{}", Red.paint(m)),
-    OutputType::Warning(m) => println!("{}", Yellow.paint(m)),
-    OutputType::Success(m) => println!("{}", Green.paint(m)),
+    OutputType::Error(m)   => println!("\n{}", Red.paint(m)),
+    OutputType::Warning(m) => println!("\n{}", Yellow.paint(m)),
+    OutputType::Success(m) => println!("\n{}", Green.paint(m)),
   }
 }
 
@@ -280,7 +280,7 @@ fn decode_compiler_message(line: &str) -> serde_json::Result<CompilerMessage> {
 fn updated_stdout_line(line: &str, test_results_buffer: &mut HashMap<&str, u32>) -> Option<String> {
   if line == "failures:" {
     let dots = print_success_dots(test_results_buffer.get("success"));
-    Some(print_failures_line(line, &dots))
+    Some(print_failures_line(line, dots.as_deref()))
   } else if line.starts_with("test result: FAILED.") {
     // Clear the test success
     test_results_buffer.clear();
@@ -288,10 +288,10 @@ fn updated_stdout_line(line: &str, test_results_buffer: &mut HashMap<&str, u32>)
   } else if line.starts_with("test result: ok.") {
     // Print out the collected tests
     let dots = print_success_dots(test_results_buffer.get("success"));
-    let output = print_test_success(line, dots);
+    let output = print_test_success(line, dots.as_deref());
     test_results_buffer.clear();
     Some(output)
-  } else if line.split_inclusive(".").count() == line.len()  {
+  } else if !line.is_empty() && line.split_inclusive(".").count() == line.len()  {
     Some(print_test_run_dots(line))
   } else if line.contains("    Finished ") || line.contains("    Compiling ") { // TODO: Use regex. (dev|test|release)
     None
@@ -308,6 +308,8 @@ fn updated_stdout_line(line: &str, test_results_buffer: &mut HashMap<&str, u32>)
     None
   } else if line.ends_with("... FAILED") {
     Some(print_failed_test_name(line))
+  } else if line.is_empty() {
+    None
   } else {
     Some(default_stdout_line(line))
   }
@@ -320,7 +322,7 @@ fn print_failed_test_name(line: &str) -> String {
 
 
 fn print_test_name(line: &str) -> String {
-  s!("{}", Yellow.paint(line.trim()))
+  s!("\n{}", Yellow.paint(line.trim()))
 }
 
 
@@ -328,8 +330,11 @@ fn print_test_run_dots(line: &str) -> String {
   s!("{}", Green.paint(line))
 }
 
-fn print_failures_line(line: &str, dots: &str) -> String {
-  s!("{}\n{} {}", dots, RGB(133, 138, 118).paint("stdout:"), Red.paint(line))
+fn print_failures_line(line: &str, maybe_dots: Option<&str>) -> String {
+  match maybe_dots {
+    Some(dots) => s!("{}\n{} {}", dots, RGB(133, 138, 118).paint("stdout:"), Red.paint(line)),
+    None => s!("{} {}", RGB(133, 138, 118).paint("stdout:"), Red.paint(line)),
+  }
 }
 
 
@@ -340,22 +345,25 @@ fn print_test_failure(line: &str) -> String {
 }
 
 
-fn print_success_dots(successes: Option<&u32>) -> String {
-  if let Some(dots_count) = successes {
-    let dots_str = (0 .. *dots_count).into_iter().map(|_| ".").collect::<String>();
-    s!("{}", Green.paint(dots_str))
-  } else {
-    "".to_owned()
-  }
+fn print_success_dots(successes: Option<&u32>) -> Option<String> {
+  successes
+    .map(|dots_count|{
+      let dots_str = (0 .. *dots_count).into_iter().map(|_| ".").collect::<String>();
+      s!("{}", Green.paint(dots_str))
+    })
 }
 
 
-fn print_test_success(line: &str, dots: String) -> String {
+fn print_test_success(line: &str, maybe_dots: Option<&str>) -> String {
   let test_result = s!("test result: {}.", Green.paint("ok"));
   let message = s!("{}{}", test_result, line.strip_prefix("test result: ok.").unwrap_or_else(|| ""));
 
   let formatted_test_result = s!("{} {}", RGB(133, 138, 118).paint("stdout:"), message);
-  s!("{}\n{}", &dots, &formatted_test_result)
+  match maybe_dots {
+    Some(dots) => s!("{}\n{}", &dots, &formatted_test_result),
+    None => s!("{}", &formatted_test_result),
+}
+
 }
 
 fn default_stdout_line(line: &str) -> String {
