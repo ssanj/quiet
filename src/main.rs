@@ -1,4 +1,4 @@
-use std::{io::{self, BufRead}};
+use std::{io::{self, BufRead}, collections::HashMap};
 use clap::Parser;
 use serde_json::Result as JsonResult;
 use ansi_term::Colour::{Green, Red, Blue, RGB, Yellow};
@@ -218,6 +218,8 @@ fn filter_by_filename(file_to_show_errors_for: Option<String>, matched: Vec<Comp
 
 
 fn get_compiler_messages() -> Vec<CompilerMessage> {
+  let mut test_results_buffer: HashMap<&str, u32> = HashMap::new();
+
   io::stdin()
     .lock()
     .lines()
@@ -227,34 +229,40 @@ fn get_compiler_messages() -> Vec<CompilerMessage> {
       // if it's not a JSON payload
       if !&line.starts_with("{") {
         // Maybe use an ADT and tag this as StdoutMessage vs JsonMessage
-        passthrough_stdout_line(line.as_str());
+        passthrough_stdout_line(line.as_str(), &mut test_results_buffer);
         None
       } else {
-        let reason: Reason = decode_reason(line.as_str());
-
-        //if type of reason is compiler-message, then we want the full payload otherwise ignore.
-        if reason.reason == "compiler-message" {
-          let compiler_message = decode_compiler_message(line.as_str());
-          Some(compiler_message)
-        } else {
-          None
+        // TODO: Handle Result from this without panicking
+        match decode_reason(line.as_str()) {
+            Ok(reason) => {
+              //if type of reason is compiler-message, then we want the full payload otherwise ignore.
+              if reason.reason == "compiler-message" {
+                let compiler_message = decode_compiler_message(line.as_str());
+                Some(compiler_message)
+              } else {
+                None
+              }
+            },
+            Err(e) => {
+              let line_with_decoding_error = s!("******************* Failed to decode Reason from this line: {}\ncause: {}", Red.paint(line), e.to_string());
+              println!("{}", &line_with_decoding_error);
+              None
+            },
         }
       }
     }).collect()
 }
 
 
-fn passthrough_stdout_line(line: &str) {
-  if let Some(new_line) = updated_stdout_line(&line) {
+fn passthrough_stdout_line(line: &str, test_results_buffer: &mut HashMap<&str, u32>) {
+  if let Some(new_line) = updated_stdout_line(&line, test_results_buffer) {
     println!("{}", new_line)
   }
 }
 
 
-fn decode_reason(line: &str) -> Reason {
-  let line_with_decoding_error = s!("******************* Failed to decode Reason from this line: {}", Red.paint(line));
-
-  serde_json::from_str(&line).expect(&line_with_decoding_error)
+fn decode_reason(line: &str) -> serde_json::Result<Reason> {
+  serde_json::from_str(&line)
 }
 
 
@@ -264,19 +272,51 @@ fn decode_compiler_message(line: &str) -> CompilerMessage {
   serde_json::from_str(&line).expect(&line_with_error)
 }
 
-
-fn updated_stdout_line(line: &str) -> Option<String> {
+// TODO: Refactor this spaghetti code
+fn updated_stdout_line(line: &str, test_results_buffer: &mut HashMap<&str, u32>) -> Option<String> {
   if line == "failures:" {
-    Some(print_failures_line(line))
+    let dots = print_success_dots(test_results_buffer.get("success"));
+    Some(print_failures_line(line, &dots))
   } else if line.starts_with("test result: FAILED.") {
+    // Clear the test success
+    test_results_buffer.clear();
     Some(print_test_failure(line))
   } else if line.starts_with("test result: ok.") {
-    Some(print_test_success(line))
+    // Print out the collected tests
+    let dots = print_success_dots(test_results_buffer.get("success"));
+    let output = print_test_success(line, dots);
+    test_results_buffer.clear();
+    Some(output)
   } else if line.split_inclusive(".").count() == line.len()  {
     Some(print_test_run_dots(line))
+  } else if line.contains("    Finished ") || line.contains("    Compiling ") { // TODO: Use regex. (dev|test|release)
+    None
+  } else if line.contains("     Running ") {
+    Some(print_test_name(line))
+  } else if line.ends_with("... ok") {
+    // TODO: Move to a function
+    let existing_success_count = test_results_buffer.get("success");
+    if let Some(success_count) = existing_success_count {
+      test_results_buffer.insert("success", success_count + 1);
+    } else {
+      test_results_buffer.insert("success", 1);
+    }
+    None
+  } else if line.ends_with("... FAILED") {
+    Some(print_failed_test_name(line))
   } else {
     Some(default_stdout_line(line))
   }
+}
+
+
+fn print_failed_test_name(line: &str) -> String {
+  s!("{}", Red.paint(line))
+}
+
+
+fn print_test_name(line: &str) -> String {
+  s!("{}", Yellow.paint(line.trim()))
 }
 
 
@@ -284,8 +324,8 @@ fn print_test_run_dots(line: &str) -> String {
   s!("{}", Green.paint(line))
 }
 
-fn print_failures_line(line: &str) -> String {
-  s!("{} {}", RGB(133, 138, 118).paint("stdout:"), Red.paint(line))
+fn print_failures_line(line: &str, dots: &str) -> String {
+  s!("{}\n{} {}", dots, RGB(133, 138, 118).paint("stdout:"), Red.paint(line))
 }
 
 
@@ -296,10 +336,22 @@ fn print_test_failure(line: &str) -> String {
 }
 
 
-fn print_test_success(line: &str) -> String {
+fn print_success_dots(successes: Option<&u32>) -> String {
+  if let Some(dots_count) = successes {
+    let dots_str = (0 .. *dots_count).into_iter().map(|_| ".").collect::<String>();
+    s!("{}", Green.paint(dots_str))
+  } else {
+    "".to_owned()
+  }
+}
+
+
+fn print_test_success(line: &str, dots: String) -> String {
   let test_result = s!("test result: {}.", Green.paint("ok"));
   let message = s!("{}{}", test_result, line.strip_prefix("test result: ok.").unwrap_or_else(|| ""));
-  s!("{} {}", RGB(133, 138, 118).paint("stdout:"), message)
+
+  let formatted_test_result = s!("{} {}", RGB(133, 138, 118).paint("stdout:"), message);
+  s!("{}\n{}", &dots, &formatted_test_result)
 }
 
 fn default_stdout_line(line: &str) -> String {
