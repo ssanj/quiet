@@ -105,6 +105,7 @@ enum OutputType<'a> {
 }
 
 fn print_compiler_output(constrained_matches: Vec<CompilerMessage>, level_status: LevelStatus) {
+  println!();
   constrained_matches
     .into_iter()
     .for_each(|compiler_message|{
@@ -278,7 +279,9 @@ fn decode_compiler_message(line: &str) -> serde_json::Result<CompilerMessage> {
 
 // TODO: Refactor this spaghetti code
 fn updated_stdout_line(line: &str, test_results_buffer: &mut HashMap<&str, u32>) -> Option<String> {
-  if line == "failures:" {
+  if line.is_empty() {
+    None
+  } else if line == "failures:" {
     let dots = print_success_dots(test_results_buffer.get("success"));
     Some(print_failures_line(line, dots.as_deref()))
   } else if line.starts_with("test result: FAILED.") {
@@ -291,11 +294,14 @@ fn updated_stdout_line(line: &str, test_results_buffer: &mut HashMap<&str, u32>)
     let output = print_test_success(line, dots.as_deref());
     test_results_buffer.clear();
     Some(output)
-  } else if !line.is_empty() && line.split_inclusive(".").count() == line.len()  {
+  } else if line.split_inclusive(".").count() == line.len()  {
     Some(print_test_run_dots(line))
-  } else if line.contains("    Finished ") || line.contains("    Compiling ") { // TODO: Use regex. (dev|test|release)
+  } else if line.trim().starts_with("Finished ") ||
+            line.trim().starts_with("Compiling ") ||
+            line.trim().starts_with("error: ") ||
+            line.trim().starts_with("warning: ") {
     None
-  } else if line.contains("     Running ") {
+  } else if line.trim().starts_with("Running ") {
     Some(print_test_name(line))
   } else if line.ends_with("... ok") {
     // TODO: Move to a function
@@ -308,8 +314,6 @@ fn updated_stdout_line(line: &str, test_results_buffer: &mut HashMap<&str, u32>)
     None
   } else if line.ends_with("... FAILED") {
     Some(print_failed_test_name(line))
-  } else if line.is_empty() {
-    None
   } else {
     Some(default_stdout_line(line))
   }
@@ -322,7 +326,7 @@ fn print_failed_test_name(line: &str) -> String {
 
 
 fn print_test_name(line: &str) -> String {
-  s!("\n{}", Yellow.paint(line.trim()))
+  s!("\n{}", Yellow.paint(line.trim().strip_prefix("Running ").unwrap_or(line)))
 }
 
 
