@@ -24,6 +24,7 @@ fn main() -> JsonResult<()>{
   let show_warnings = cli.show_warnings;
 
   print_start_banner();
+  let mut test_results_buffer: HashMap<&str, u32> = HashMap::new();
 
   let matched: Vec<CompilerMessage> =
     get_compiler_messages()
@@ -31,6 +32,10 @@ fn main() -> JsonResult<()>{
     .filter_map(|r| {
       match r {
         Ok(CompilerMessageDecodingStatus::DecodedCompilerMessage(cm)) => Some(cm),
+        Ok(CompilerMessageDecodingStatus::StdOutLine(line)) => {
+          passthrough_stdout_line(line.as_str(), &mut test_results_buffer);
+          None
+        },
         Ok(CompilerMessageDecodingStatus::NoCompilerMessage) => None,
         Err(e) => {
           println!("{}", e.to_string());
@@ -238,13 +243,11 @@ enum ReasonDecodingStatus<'a> {
 
 enum CompilerMessageDecodingStatus {
   DecodedCompilerMessage(CompilerMessage),
+  StdOutLine(String),
   NoCompilerMessage
 }
 
-
 fn get_compiler_messages() -> Vec<Result<CompilerMessageDecodingStatus, String>> {
-  let mut test_results_buffer: HashMap<&str, u32> = HashMap::new();
-
   io::stdin()
   .lock()
   .lines()
@@ -253,9 +256,7 @@ fn get_compiler_messages() -> Vec<Result<CompilerMessageDecodingStatus, String>>
     let line = line_result.unwrap();
     // if it's not a JSON payload
     if !&line.starts_with("{") {
-      // Maybe use an ADT and tag this as StdoutMessage vs JsonMessage
-      passthrough_stdout_line(line.as_str(), &mut test_results_buffer);
-      Ok(CompilerMessageDecodingStatus::NoCompilerMessage)
+      Ok(CompilerMessageDecodingStatus::StdOutLine(line))
     } else {
       let reason_decoding: Result<(&str, Reason), String> =
         decode_reason(line.as_str())
