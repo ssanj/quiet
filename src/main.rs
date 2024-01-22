@@ -24,27 +24,8 @@ fn main() -> JsonResult<()>{
   let show_warnings = cli.show_warnings;
 
   print_start_banner();
-  let mut test_results_buffer: HashMap<&str, u32> = HashMap::new();
 
-  let matched: Vec<CompilerMessage> =
-    get_compiler_messages()
-    .into_iter()
-    .filter_map(|r| {
-      match r {
-        Ok(CompilerMessageDecodingStatus::DecodedCompilerMessage(cm)) => Some(cm),
-        Ok(CompilerMessageDecodingStatus::StdOutLine(line)) => {
-          passthrough_stdout_line(line.as_str(), &mut test_results_buffer);
-          None
-        },
-        Ok(CompilerMessageDecodingStatus::NoCompilerMessage) => None,
-        Err(e) => {
-          println!("{}", e.to_string());
-          None
-        },
-      }
-    })
-    .collect();
-
+  let matched: Vec<CompilerMessage> = get_matches();
   let filtered_match: Vec<CompilerMessage> = filter_by_filename(file_to_show_errors_for, matched);
   let filtered_by_level: Vec<LevelType> = filter_by_level(filtered_match);
   let level_status: LevelStatus = get_level_status(&filtered_by_level);
@@ -55,6 +36,29 @@ fn main() -> JsonResult<()>{
   print_compiler_output(constrained_matches, level_status);
 
   Ok(())
+}
+
+
+fn get_matches() -> Vec<CompilerMessage> {
+  let mut test_results_buffer: HashMap<&str, u32> = HashMap::new();
+
+  get_compiler_messages()
+  .into_iter()
+  .filter_map(|r| {
+    match r {
+      Ok(CompilerMessageDecodingStatus::DecodedCompilerMessage(cm)) => Some(cm),
+      Ok(CompilerMessageDecodingStatus::StdOutLine(line)) => {
+        passthrough_stdout_line(line.as_str(), &mut test_results_buffer);
+        None
+      },
+      Ok(CompilerMessageDecodingStatus::NoCompilerMessage) => None,
+      Err(e) => {
+        println!("{}", e.to_string());
+        None
+      },
+    }
+  })
+  .collect()
 }
 
 
