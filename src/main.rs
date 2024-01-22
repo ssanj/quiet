@@ -25,7 +25,21 @@ fn main() -> JsonResult<()>{
 
   print_start_banner();
 
-  let matched: Vec<CompilerMessage> = get_compiler_messages();
+  let matched: Vec<CompilerMessage> =
+    get_compiler_messages()
+    .into_iter()
+    .filter_map(|r| {
+      match r {
+        Ok(CompilerMessageDecodingStatus::DecodedCompilerMessage(cm)) => Some(cm),
+        Ok(CompilerMessageDecodingStatus::NoCompilerMessage) => None,
+        Err(e) => {
+          println!("{}", e.to_string());
+          None
+        },
+      }
+    })
+    .collect();
+
   let filtered_match: Vec<CompilerMessage> = filter_by_filename(file_to_show_errors_for, matched);
   let filtered_by_level: Vec<LevelType> = filter_by_level(filtered_match);
   let level_status: LevelStatus = get_level_status(&filtered_by_level);
@@ -192,72 +206,95 @@ fn get_constrained_by_number(mut filtered_by_level: Vec<LevelType>, items_to_sho
 
 
 fn filter_by_filename(file_to_show_errors_for: Option<String>, matched: Vec<CompilerMessage>) -> Vec<CompilerMessage> {
-    match file_to_show_errors_for {
-      Some(file_name_filter) => {
-        matched
-          .into_iter()
-          .filter(|compiler_message|{
-            let filter_matches =
-              compiler_message
-                .message
-                .spans
-                .iter()
-                .filter(|span|{
-                  span
-                    .file_name
-                    .ends_with(&file_name_filter)
-                  });
+  match file_to_show_errors_for {
+    Some(file_name_filter) => {
+      matched
+        .into_iter()
+        .filter(|compiler_message|{
+          let filter_matches =
+            compiler_message
+              .message
+              .spans
+              .iter()
+              .filter(|span|{
+                span
+                  .file_name
+                  .ends_with(&file_name_filter)
+                });
 
-             let has_matches = !filter_matches.collect::<Vec<_>>().is_empty();
-             has_matches
-          })
-          .collect::<Vec<_>>()
-      },
-      None => matched
-    }
+           let has_matches = !filter_matches.collect::<Vec<_>>().is_empty();
+           has_matches
+        })
+        .collect::<Vec<_>>()
+    },
+    None => matched
+  }
+}
+
+enum ReasonDecodingStatus<'a> {
+  MatchesCompilerMessage(&'a str),
+  DoesNotMatchCompilerMessage
+}
+
+enum CompilerMessageDecodingStatus {
+  DecodedCompilerMessage(CompilerMessage),
+  NoCompilerMessage
 }
 
 
-fn get_compiler_messages() -> Vec<CompilerMessage> {
+fn get_compiler_messages() -> Vec<Result<CompilerMessageDecodingStatus, String>> {
   let mut test_results_buffer: HashMap<&str, u32> = HashMap::new();
 
   io::stdin()
-    .lock()
-    .lines()
-    .into_iter()
-    .filter_map(|line_result|{
-      let line = line_result.unwrap();
-      // if it's not a JSON payload
-      if !&line.starts_with("{") {
-        // Maybe use an ADT and tag this as StdoutMessage vs JsonMessage
-        passthrough_stdout_line(line.as_str(), &mut test_results_buffer);
-        None
-      } else {
-        // TODO: Handle Result from this without panicking
-        match decode_reason(line.as_str()) {
-            Ok(reason) => {
-              //if type of reason is compiler-message, then we want the full payload otherwise ignore.
-              if reason.reason == "compiler-message" {
-                match decode_compiler_message(line.as_str()) {
-                   Result::Ok(cm) => Some(cm),
-                   Result::Err(e) => {
-                      let line_with_error = s!("******************* Failed to decode CompilerMessage from this line: {}\ncause: {}", Red.paint(line), e.to_string());
-                    println!("{}", line_with_error);
-                    None
-                   }
-                }
-              } else {
-                None
-              }
-            },
-            Err(e) => {
-              let line_with_decoding_error = s!("******************* Failed to decode Reason from this line: {}\ncause: {}", Red.paint(line), e.to_string());
-              println!("{}", &line_with_decoding_error);
-              None
-            },
-        }
-      }
-    }).collect()
+  .lock()
+  .lines()
+  .into_iter()
+  .map(|line_result|{
+    let line = line_result.unwrap();
+    // if it's not a JSON payload
+    if !&line.starts_with("{") {
+      // Maybe use an ADT and tag this as StdoutMessage vs JsonMessage
+      passthrough_stdout_line(line.as_str(), &mut test_results_buffer);
+      Ok(CompilerMessageDecodingStatus::NoCompilerMessage)
+    } else {
+      let reason_decoding: Result<(&str, Reason), String> =
+        decode_reason(line.as_str())
+          .map(|r| (line.as_str(), r))
+          .map_err(|e| {
+              s!("******************* Failed to decode Reason from this line: {}\ncause: {}", Red.paint(line.as_str()), e.to_string())
+            });
+
+
+      let decoding_status: Result<ReasonDecodingStatus<'_>, String> =
+        reason_decoding
+          .map(|(l, reason)| {
+            if reason.reason == "compiler-message" {
+              ReasonDecodingStatus::MatchesCompilerMessage(l)
+            } else {
+              ReasonDecodingStatus::DoesNotMatchCompilerMessage
+            }
+          });
+
+
+      let result: Result<CompilerMessageDecodingStatus, String> =
+        decoding_status
+          .and_then(|ds| {
+            match ds {
+              ReasonDecodingStatus::MatchesCompilerMessage(l) => {
+                  decode_compiler_message(l)
+                  .map(|cm| CompilerMessageDecodingStatus::DecodedCompilerMessage(cm))
+                  .map_err(|e| {
+                    s!("******************* Failed to decode CompilerMessage from this line: {}\ncause: {}", Red.paint(l), e.to_string())
+                  })
+              },
+              ReasonDecodingStatus::DoesNotMatchCompilerMessage => Ok(CompilerMessageDecodingStatus::NoCompilerMessage),
+            }
+          });
+
+      result
+    } //else
+  })
+  .collect()
 }
 
 
