@@ -1,3 +1,5 @@
+![GitHub Release](https://img.shields.io/github/v/release/ssanj/quiet)
+
 # Quiet
 
 When refactoring or working in some intermediate state, Cargo can end up spamming you with a lot of errors or warnings that you don't really care about. It would be nice to filter out these messages until you actually care about them.
