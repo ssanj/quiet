@@ -1,14 +1,14 @@
-use std::{io::{self, BufRead}, collections::HashMap};
 use clap::Parser;
 use serde_json::Result as JsonResult;
 
 use cli::Cli;
 use compiler_message::CompilerMessage;
 use process::compiler_messages::{ItemTypes, get_matches};
-use process::stdout::{print_start_banner, print_stdout_line, print_compiler_output};
-use process::level_status::get_messages_by_level;
+use process::stdout::{print_start_banner, print_compiler_output, print_errors, print_stdout_lines};
+use process::level_status::{get_messages_by_level, LevelInfo};
 use process::limit::by_number;
 use process::filter::by_filename;
+use process::all_messages::AllMessages;
 use rendered::Rendered;
 
 mod reason;
@@ -27,36 +27,30 @@ fn main() -> JsonResult<()>{
 
   print_start_banner();
 
-  let compiler_messages: Vec<CompilerMessage> = get_compiler_messages();
+  let all_messages = get_all_messages();
+  let compiler_messages: Vec<CompilerMessage> = all_messages.compiler_messages;
   let filtered_by_filename: Vec<CompilerMessage> = by_filename(file_to_show_errors_for, compiler_messages);
-  let level_info = get_messages_by_level(filtered_by_filename);
+  let level_info: LevelInfo = get_messages_by_level(filtered_by_filename);
   let limited_by_item_size: Vec<CompilerMessage> =
     by_number(level_info.level_types, items_to_show, show_warnings);
 
+  print_errors(all_messages.errors);
+  print_stdout_lines(all_messages.stdout_lines);
   print_compiler_output(limited_by_item_size, level_info.status);
 
   Ok(())
 }
 
 
-fn get_compiler_messages() -> Vec<CompilerMessage> {
-  let mut test_results_buffer: HashMap<&str, u32> = HashMap::new();
-
+fn get_all_messages() -> AllMessages {
   get_matches()
     .into_iter()
-    .filter_map(|it| {
+    .fold(AllMessages::new(), |mut acc: AllMessages, it| {
       match it {
-        ItemTypes::CompilerMessageType(cm) => Some(cm),
-        ItemTypes::StdoutLineType(line) => {
-          print_stdout_line(line.as_str(), &mut test_results_buffer);
-          None
-        },
-        ItemTypes::ErrorType(error) => {
-          println!("{}", error);
-          None
-        },
+        ItemTypes::CompilerMessageType(cm) => {acc.add_compiler_message(cm); acc},
+        ItemTypes::StdoutLineType(line) => {acc.add_stdout_line(line); acc},
+        ItemTypes::ErrorType(error) => {acc.add_error(error); acc},
       }
     })
-    .collect()
 }
 

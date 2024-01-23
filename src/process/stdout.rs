@@ -6,13 +6,6 @@ use super::level_status::LevelStatus;
 use std::time::SystemTime;
 
 
-pub fn print_stdout_line(line: &str, test_results_buffer: &mut HashMap<&str, u32>) {
-  if let Some(new_line) = updated_stdout_line(&line, test_results_buffer) {
-    println!("{}", new_line)
-  }
-}
-
-
 /// Help identify the current execution of quiet by using a unique number for each execution.
 /// This can be useful for when you are fixing a lot of errors one by one, and have a lot of
 /// compilation errors on the screen.
@@ -55,6 +48,30 @@ pub fn print_compiler_output(constrained_matches: Vec<CompilerMessage>, level_st
   }
 }
 
+pub fn print_errors(errors: Vec<String>) {
+    errors
+      .into_iter()
+      .for_each(|e| {
+        println!("{}", e)
+      })
+}
+
+pub fn print_stdout_lines(stdout_lines: Vec<String>) {
+    let mut test_results_buffer: HashMap<&str, u32> = HashMap::new();
+
+    stdout_lines
+      .into_iter()
+      .for_each(|line| {
+        print_stdout_line(&line, &mut test_results_buffer)
+      })
+}
+
+
+fn print_stdout_line(line: &str, test_results_buffer: &mut HashMap<&str, u32>) {
+  if let Some(new_line) = updated_stdout_line(&line, test_results_buffer) {
+    println!("{}", new_line)
+  }
+}
 
 enum OutputType<'a> {
   Error(&'a str),

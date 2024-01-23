@@ -3,3 +3,4 @@ pub mod stdout;
 pub mod level_status;
 pub mod limit;
 pub mod filter;
+pub mod all_messages;
