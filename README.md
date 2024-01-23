@@ -46,6 +46,12 @@ cargo watch -x 'test --message-format json-diagnostic-rendered-ansi 2>&1  | quie
 
 Also look at the [qcompile](https://github.com/ssanj/quiet/blob/main/qcompile), [qcompile-test](https://github.com/ssanj/quiet/blob/main/qcompile-test) and [qrun-test](https://github.com/ssanj/quiet/blob/main/qrun-test) sample scripts in this repository.
 
+Note: The above scripts use [watch](https://crates.io/crates/cargo-watch), which you can install with:
+
+```
+cargo install cargo-watch
+```
+
 ## Installation
 
 ### Building from source
