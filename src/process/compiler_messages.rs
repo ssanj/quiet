@@ -6,7 +6,34 @@ use crate::compiler_message_decoding_status::CompilerMessageDecodingStatus;
 use std::format as s;
 use ansi_term::Color::Red;
 
-pub fn get_compiler_messages() -> Vec<Result<CompilerMessageDecodingStatus, String>> {
+
+pub enum ItemTypes {
+  CompilerMessageType(CompilerMessage),
+  StdoutLineType(String),
+  ErrorType(String)
+}
+
+
+pub fn get_matches() -> Vec<ItemTypes> {
+  get_compiler_messages()
+  .into_iter()
+  .filter_map(|r| {
+    match r {
+      Ok(CompilerMessageDecodingStatus::DecodedCompilerMessage(cm)) => Some(ItemTypes::CompilerMessageType(cm)),
+      Ok(CompilerMessageDecodingStatus::StdOutLine(line)) => {
+        Some(ItemTypes::StdoutLineType(line))
+      },
+      Ok(CompilerMessageDecodingStatus::Ignore) => None,
+      Err(e) => {
+        Some(ItemTypes::ErrorType(e.to_string()))
+      },
+    }
+  })
+  .collect()
+}
+
+
+fn get_compiler_messages() -> Vec<Result<CompilerMessageDecodingStatus, String>> {
   stdin()
   .lock()
   .lines()
@@ -20,7 +47,7 @@ pub fn get_compiler_messages() -> Vec<Result<CompilerMessageDecodingStatus, Stri
       let process_result: Result<CompilerMessageDecodingStatus, String> =
         process_compiler_message(line.as_str())
           .map(|maybe_cm| {
-            maybe_cm.map_or_else(|| CompilerMessageDecodingStatus::NoCompilerMessage, |cm| CompilerMessageDecodingStatus::DecodedCompilerMessage(cm))
+            maybe_cm.map_or_else(|| CompilerMessageDecodingStatus::Ignore, |cm| CompilerMessageDecodingStatus::DecodedCompilerMessage(cm))
           });
 
       process_result
