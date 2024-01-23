@@ -57,21 +57,93 @@ pub fn print_errors(errors: Vec<String>) {
 }
 
 pub fn print_stdout_lines(stdout_lines: Vec<String>) {
-    let mut test_results_buffer: HashMap<&str, u32> = HashMap::new();
+  let mut test_results_buffer: HashMap<&str, u32> = HashMap::new();
 
+  // TODO: Move to a separate function
+  let line_types: Vec<LineType> =
     stdout_lines
       .into_iter()
-      .for_each(|line| {
-        print_stdout_line(&line, &mut test_results_buffer)
+      .map(|line| {
+        if line.is_empty() {
+          LineType::Empty
+        } else if line == "failures:" {
+          LineType::Failures(line)
+        } else if line.starts_with("test result: FAILED.") {
+          LineType::TestResultFailed(line)
+        } else if line.starts_with("test result: ok.") {
+          LineType::TestResultOk(line)
+        } else if line.split_inclusive(".").count() == line.len()  {
+          LineType::TestDots(line)
+        } else if line.trim().starts_with("Finished ") {
+          LineType::Finished(line)
+        } else if line.trim().starts_with("Compiling ") {
+          LineType::Compiling(line)
+        } else if line.trim().starts_with("error: ") {
+          LineType::Error(line)
+        } else if line.trim().starts_with("warning: ") {
+          LineType::Warning(line)
+        } else if line.trim().starts_with("Running ") {
+          LineType::Running(line)
+        } else if line.ends_with("... ok") {
+          LineType::SingleTestOk(line)
+        } else if line.ends_with("... FAILED") {
+          LineType::SingleTestFailed(line)
+        } else {
+          LineType::Unprocessed(line)
+        }
       })
+      .collect();
+
+  // TODO: Move to a separate function
+  let stdout_lines: Vec<String> =
+    line_types
+      .into_iter()
+      .filter_map(|line_type| {
+        match line_type {
+          LineType::Empty => None,
+          LineType::Failures(line) => {
+            let dots = success_dots_string(test_results_buffer.get("success"));
+            Some(failure_line_string(line.as_str(), dots.as_deref()))
+          },
+          LineType::TestResultFailed(line) => {
+            // Clear the test success
+            test_results_buffer.clear();
+            Some(test_failure_string(line.as_str()))
+          },
+          LineType::TestResultOk(line) => {
+            // Print out the collected tests
+            let dots = success_dots_string(test_results_buffer.get("success"));
+            let output = test_success_string(line.as_str(), dots.as_deref());
+            test_results_buffer.clear();
+            Some(output)
+          },
+          LineType::TestDots(line) => Some(test_run_dots_string(line.as_str())),
+          LineType::Finished(_) => None,
+          LineType::Compiling(_) => None,
+          LineType::Error(_) => None,
+          LineType::Warning(_) => None,
+          LineType::Running(line) => Some(test_name_string(line.as_str())),
+          LineType::SingleTestOk(_) => {
+            // TODO: Move to a function
+            let existing_success_count = test_results_buffer.get("success");
+            if let Some(success_count) = existing_success_count {
+              test_results_buffer.insert("success", success_count + 1);
+            } else {
+              test_results_buffer.insert("success", 1);
+            }
+            None
+          },
+          LineType::SingleTestFailed(line) => Some(failed_test_name_string(line.as_str())),
+          LineType::Unprocessed(line) => Some(default_stdout_string(line.as_str())),
+        }
+      })
+      .collect();
+
+  stdout_lines
+    .into_iter()
+    .for_each(|line| println!("{}", line))
 }
 
-
-fn print_stdout_line(line: &str, test_results_buffer: &mut HashMap<&str, u32>) {
-  if let Some(new_line) = updated_stdout_line(&line, test_results_buffer) {
-    println!("{}", new_line)
-  }
-}
 
 enum OutputType<'a> {
   Error(&'a str),
@@ -79,65 +151,38 @@ enum OutputType<'a> {
   Success(&'a str),
 }
 
-
-// TODO: Refactor this spaghetti code
-fn updated_stdout_line(line: &str, test_results_buffer: &mut HashMap<&str, u32>) -> Option<String> {
-  if line.is_empty() {
-    None
-  } else if line == "failures:" {
-    let dots = print_success_dots(test_results_buffer.get("success"));
-    Some(print_failures_line(line, dots.as_deref()))
-  } else if line.starts_with("test result: FAILED.") {
-    // Clear the test success
-    test_results_buffer.clear();
-    Some(print_test_failure(line))
-  } else if line.starts_with("test result: ok.") {
-    // Print out the collected tests
-    let dots = print_success_dots(test_results_buffer.get("success"));
-    let output = print_test_success(line, dots.as_deref());
-    test_results_buffer.clear();
-    Some(output)
-  } else if line.split_inclusive(".").count() == line.len()  {
-    Some(print_test_run_dots(line))
-  } else if line.trim().starts_with("Finished ") ||
-            line.trim().starts_with("Compiling ") ||
-            line.trim().starts_with("error: ") ||
-            line.trim().starts_with("warning: ") {
-    None
-  } else if line.trim().starts_with("Running ") {
-    Some(print_test_name(line))
-  } else if line.ends_with("... ok") {
-    // TODO: Move to a function
-    let existing_success_count = test_results_buffer.get("success");
-    if let Some(success_count) = existing_success_count {
-      test_results_buffer.insert("success", success_count + 1);
-    } else {
-      test_results_buffer.insert("success", 1);
-    }
-    None
-  } else if line.ends_with("... FAILED") {
-    Some(print_failed_test_name(line))
-  } else {
-    Some(default_stdout_line(line))
-  }
+enum LineType {
+  Empty,
+  Failures(String),
+  TestResultFailed(String),
+  TestResultOk(String),
+  TestDots(String),
+  Finished(String),
+  Compiling(String),
+  Error(String),
+  Warning(String),
+  Running(String),
+  SingleTestOk(String),
+  SingleTestFailed(String),
+  Unprocessed(String),
 }
 
 
-fn print_failed_test_name(line: &str) -> String {
+fn failed_test_name_string(line: &str) -> String {
   s!("{}", Red.paint(line))
 }
 
 
-fn print_test_name(line: &str) -> String {
+fn test_name_string(line: &str) -> String {
   s!("\n{}", Yellow.paint(line.trim().strip_prefix("Running ").unwrap_or(line)))
 }
 
 
-fn print_test_run_dots(line: &str) -> String {
+fn test_run_dots_string(line: &str) -> String {
   s!("{}", Green.paint(line))
 }
 
-fn print_failures_line(line: &str, maybe_dots: Option<&str>) -> String {
+fn failure_line_string(line: &str, maybe_dots: Option<&str>) -> String {
   match maybe_dots {
     Some(dots) => s!("{}\n{} {}", dots, RGB(133, 138, 118).paint("stdout:"), Red.paint(line)),
     None => s!("{} {}", RGB(133, 138, 118).paint("stdout:"), Red.paint(line)),
@@ -145,14 +190,14 @@ fn print_failures_line(line: &str, maybe_dots: Option<&str>) -> String {
 }
 
 
-fn print_test_failure(line: &str) -> String {
+fn test_failure_string(line: &str) -> String {
   let failure = s!("test result: {}.", Red.paint("FAILED"));
   let message = s!("{}{}", failure, line.strip_prefix("test result: FAILED.").unwrap_or_else(|| ""));
   s!("{} {}", RGB(133, 138, 118).paint("stdout:"), message)
 }
 
 
-fn print_success_dots(successes: Option<&u32>) -> Option<String> {
+fn success_dots_string(successes: Option<&u32>) -> Option<String> {
   successes
     .map(|dots_count|{
       let dots_str = (0 .. *dots_count).into_iter().map(|_| ".").collect::<String>();
@@ -161,7 +206,7 @@ fn print_success_dots(successes: Option<&u32>) -> Option<String> {
 }
 
 
-fn print_test_success(line: &str, maybe_dots: Option<&str>) -> String {
+fn test_success_string(line: &str, maybe_dots: Option<&str>) -> String {
   let test_result = s!("test result: {}.", Green.paint("ok"));
   let message = s!("{}{}", test_result, line.strip_prefix("test result: ok.").unwrap_or_else(|| ""));
 
@@ -169,11 +214,10 @@ fn print_test_success(line: &str, maybe_dots: Option<&str>) -> String {
   match maybe_dots {
     Some(dots) => s!("{}\n{}", &dots, &formatted_test_result),
     None => s!("{}", &formatted_test_result),
+  }
 }
 
-}
 
-
-fn default_stdout_line(line: &str) -> String {
+fn default_stdout_string(line: &str) -> String {
   s!("{} {}", RGB(133, 138, 118).paint("stdout:"), line)
 }

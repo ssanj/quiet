@@ -33,7 +33,7 @@ pub struct LevelInfo {
 }
 
 
-pub fn get_messages_by_level(filtered_match: Vec<CompilerMessage>) -> LevelInfo {
+pub fn by_level(filtered_match: Vec<CompilerMessage>) -> LevelInfo {
   let filtered_by_level: Vec<LevelType> = filter_by_level(filtered_match);
   let level_status = get_level_status(&filtered_by_level);
   LevelInfo {

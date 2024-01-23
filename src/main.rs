@@ -5,7 +5,7 @@ use cli::Cli;
 use compiler_message::CompilerMessage;
 use process::compiler_messages::{ItemTypes, get_matches};
 use process::stdout::{print_start_banner, print_compiler_output, print_errors, print_stdout_lines};
-use process::level_status::{get_messages_by_level, LevelInfo};
+use process::level_status::{by_level, LevelInfo};
 use process::limit::by_number;
 use process::filter::by_filename;
 use process::all_messages::AllMessages;
@@ -30,12 +30,12 @@ fn main() -> JsonResult<()>{
   let all_messages = get_all_messages();
   let compiler_messages: Vec<CompilerMessage> = all_messages.compiler_messages;
   let filtered_by_filename: Vec<CompilerMessage> = by_filename(file_to_show_errors_for, compiler_messages);
-  let level_info: LevelInfo = get_messages_by_level(filtered_by_filename);
+  let level_info: LevelInfo = by_level(filtered_by_filename);
   let limited_by_item_size: Vec<CompilerMessage> =
     by_number(level_info.level_types, items_to_show, show_warnings);
 
-  print_errors(all_messages.errors);
   print_stdout_lines(all_messages.stdout_lines);
+  print_errors(all_messages.errors);
   print_compiler_output(limited_by_item_size, level_info.status);
 
   Ok(())
