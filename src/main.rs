@@ -47,9 +47,9 @@ fn get_all_messages() -> AllMessages {
     .into_iter()
     .fold(AllMessages::new(), |mut acc: AllMessages, it| {
       match it {
-        ItemTypes::CompilerMessageType(cm) => {acc.add_compiler_message(cm); acc},
-        ItemTypes::StdoutLineType(line) => {acc.add_stdout_line(line); acc},
-        ItemTypes::ErrorType(error) => {acc.add_error(error); acc},
+        ItemTypes::CompilerMessageType(cm) => { acc.add_compiler_message(cm); acc },
+        ItemTypes::StdoutLineType(line)    => { acc.add_stdout_line(line); acc },
+        ItemTypes::ErrorType(error)        => { acc.add_error(error); acc },
       }
     })
 }

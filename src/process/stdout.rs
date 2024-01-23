@@ -56,92 +56,98 @@ pub fn print_errors(errors: Vec<String>) {
       })
 }
 
+
 pub fn print_stdout_lines(stdout_lines: Vec<String>) {
-  let mut test_results_buffer: HashMap<&str, u32> = HashMap::new();
-
-  // TODO: Move to a separate function
-  let line_types: Vec<LineType> =
-    stdout_lines
-      .into_iter()
-      .map(|line| {
-        if line.is_empty() {
-          LineType::Empty
-        } else if line == "failures:" {
-          LineType::Failures(line)
-        } else if line.starts_with("test result: FAILED.") {
-          LineType::TestResultFailed(line)
-        } else if line.starts_with("test result: ok.") {
-          LineType::TestResultOk(line)
-        } else if line.split_inclusive(".").count() == line.len()  {
-          LineType::TestDots(line)
-        } else if line.trim().starts_with("Finished ") {
-          LineType::Finished(line)
-        } else if line.trim().starts_with("Compiling ") {
-          LineType::Compiling(line)
-        } else if line.trim().starts_with("error: ") {
-          LineType::Error(line)
-        } else if line.trim().starts_with("warning: ") {
-          LineType::Warning(line)
-        } else if line.trim().starts_with("Running ") {
-          LineType::Running(line)
-        } else if line.ends_with("... ok") {
-          LineType::SingleTestOk(line)
-        } else if line.ends_with("... FAILED") {
-          LineType::SingleTestFailed(line)
-        } else {
-          LineType::Unprocessed(line)
-        }
-      })
-      .collect();
-
-  // TODO: Move to a separate function
-  let stdout_lines: Vec<String> =
-    line_types
-      .into_iter()
-      .filter_map(|line_type| {
-        match line_type {
-          LineType::Empty => None,
-          LineType::Failures(line) => {
-            let dots = success_dots_string(test_results_buffer.get("success"));
-            Some(failure_line_string(line.as_str(), dots.as_deref()))
-          },
-          LineType::TestResultFailed(line) => {
-            // Clear the test success
-            test_results_buffer.clear();
-            Some(test_failure_string(line.as_str()))
-          },
-          LineType::TestResultOk(line) => {
-            // Print out the collected tests
-            let dots = success_dots_string(test_results_buffer.get("success"));
-            let output = test_success_string(line.as_str(), dots.as_deref());
-            test_results_buffer.clear();
-            Some(output)
-          },
-          LineType::TestDots(line) => Some(test_run_dots_string(line.as_str())),
-          LineType::Finished(_) => None,
-          LineType::Compiling(_) => None,
-          LineType::Error(_) => None,
-          LineType::Warning(_) => None,
-          LineType::Running(line) => Some(test_name_string(line.as_str())),
-          LineType::SingleTestOk(_) => {
-            // TODO: Move to a function
-            let existing_success_count = test_results_buffer.get("success");
-            if let Some(success_count) = existing_success_count {
-              test_results_buffer.insert("success", success_count + 1);
-            } else {
-              test_results_buffer.insert("success", 1);
-            }
-            None
-          },
-          LineType::SingleTestFailed(line) => Some(failed_test_name_string(line.as_str())),
-          LineType::Unprocessed(line) => Some(default_stdout_string(line.as_str())),
-        }
-      })
-      .collect();
+  let line_types: Vec<LineType> = get_line_types(stdout_lines);
+  let stdout_lines: Vec<String> = get_stdout_lines(line_types);
 
   stdout_lines
     .into_iter()
     .for_each(|line| println!("{}", line))
+}
+
+
+fn get_stdout_lines(line_types: Vec<LineType>) -> Vec<String> {
+  let mut test_results_buffer: HashMap<&str, u32> = HashMap::new();
+
+  line_types
+    .into_iter()
+    .filter_map(|line_type| {
+      match line_type {
+        LineType::Empty => None,
+        LineType::Failures(line) => {
+          let dots = success_dots_string(test_results_buffer.get("success"));
+          Some(failure_line_string(line.as_str(), dots.as_deref()))
+        },
+        LineType::TestResultFailed(line) => {
+          // Clear the test success
+          test_results_buffer.clear();
+          Some(test_failure_string(line.as_str()))
+        },
+        LineType::TestResultOk(line) => {
+          // Print out the collected tests
+          let dots = success_dots_string(test_results_buffer.get("success"));
+          let output = test_success_string(line.as_str(), dots.as_deref());
+          test_results_buffer.clear();
+          Some(output)
+        },
+        LineType::TestDots(line) => Some(test_run_dots_string(line.as_str())),
+        LineType::Finished(_) => None,
+        LineType::Compiling(_) => None,
+        LineType::Error(_) => None,
+        LineType::Warning(_) => None,
+        LineType::Running(line) => Some(test_name_string(line.as_str())),
+        LineType::SingleTestOk(_) => {
+          // TODO: Move to a function
+          let existing_success_count = test_results_buffer.get("success");
+          if let Some(success_count) = existing_success_count {
+            test_results_buffer.insert("success", success_count + 1);
+          } else {
+            test_results_buffer.insert("success", 1);
+          }
+          None
+        },
+        LineType::SingleTestFailed(line) => Some(failed_test_name_string(line.as_str())),
+        LineType::Unprocessed(line) => Some(default_stdout_string(line.as_str())),
+      }
+    })
+    .collect()
+}
+
+
+fn get_line_types(stdout_lines: Vec<String>) -> Vec<LineType> {
+  stdout_lines
+    .into_iter()
+    .map(|line| {
+      if line.is_empty() {
+        LineType::Empty
+      } else if line == "failures:" {
+        LineType::Failures(line)
+      } else if line.starts_with("test result: FAILED.") {
+        LineType::TestResultFailed(line)
+      } else if line.starts_with("test result: ok.") {
+        LineType::TestResultOk(line)
+      } else if line.split_inclusive(".").count() == line.len()  {
+        LineType::TestDots(line)
+      } else if line.trim().starts_with("Finished ") {
+        LineType::Finished(line)
+      } else if line.trim().starts_with("Compiling ") {
+        LineType::Compiling(line)
+      } else if line.trim().starts_with("error: ") {
+        LineType::Error(line)
+      } else if line.trim().starts_with("warning: ") {
+        LineType::Warning(line)
+      } else if line.trim().starts_with("Running ") {
+        LineType::Running(line)
+      } else if line.ends_with("... ok") {
+        LineType::SingleTestOk(line)
+      } else if line.ends_with("... FAILED") {
+        LineType::SingleTestFailed(line)
+      } else {
+        LineType::Unprocessed(line)
+      }
+    })
+    .collect()
 }
 
 
