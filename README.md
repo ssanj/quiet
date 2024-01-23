@@ -13,15 +13,14 @@ Reduce Cargo's compiler information output
 Usage: quiet [OPTIONS] --items <ITEMS>
 
 Options:
-      --items <ITEMS>              The number of items to show. This includes errors and warnings to display. By default only errors are shown. Use --show-warnings to include warnings. Values range from 0 to 255
+      --items <ITEMS>              The number of items to show. Values range from 0 to 255. This includes errors and warnings to display. By default only errors are shown. Use --show-warnings to include warnings
       --show-warnings              Flag to include warnings in the output
-      --file-filter <FILE_FILTER>  The file (if any) to filter on. Example: --file-filter main.rs
-  -h, --help                       Print help information
+      --file-filter <FILE_FILTER>  The file (if any) to filter on. Matches the file at the end of the path so you don't have to specify a full path. Example: --file-filter main.rs
+  -h, --help                       Print help information (use `--help` for more detail)
   -V, --version                    Print version information
 ```
 
 Cargo output should be passed to Quiet through the following format:
-
 
 ```
  cargo check -q --message-format json-diagnostic-rendered-ansi 2>&1
@@ -47,11 +46,26 @@ cargo watch -x 'test --message-format json-diagnostic-rendered-ansi 2>&1  | quie
 
 Also look at the [qcompile](https://github.com/ssanj/quiet/blob/main/qcompile), [qcompile-test](https://github.com/ssanj/quiet/blob/main/qcompile-test) and [qrun-test](https://github.com/ssanj/quiet/blob/main/qrun-test) sample scripts in this repository.
 
-## Building
+## Installation
+
+### Building from source
 
 Build Quiet with:
 
 ```
 cargo build --release
 ```
+
+Then copy `target/release/quiet` to a directory on your PATH.
+
+
+### Downloading a release
+
+Download the latest release for your platform from the [GitHub releases page](https://github.com/ssanj/quiet/releases).
+
+Make it executable with:
+
+`chmod +x <QUIET_EXEC>`
+
+Copy executable to a directory on your path.
 
