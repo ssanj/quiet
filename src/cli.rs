@@ -27,7 +27,7 @@ use clap::Parser;
 pub struct Cli {
 
   /// The number of items to show. Values range from 0 to 255. This includes errors and warnings to display. By default only errors are shown. Use --show-warnings to include warnings.
-  #[arg(long, )]
+  #[arg(long)]
   pub items: u8,
 
   /// Flag to include warnings in the output
@@ -36,6 +36,11 @@ pub struct Cli {
 
   /// The file (if any) to filter on. Matches the file at the end of the path so you don't have to specify a full path. Example: --file-filter main.rs
   #[arg(long)]
-  pub file_filter: Option<String>
+  pub file_filter: Option<String>,
+
+  /// Strings to filter out from the output. Note, this only applies to Strings quiet does not need to output. Example --filtered-out "libunwind: malformed"
+  #[arg(long)]
+  pub filtered_out: Vec<String>
+
 }
 

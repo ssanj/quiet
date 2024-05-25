@@ -24,7 +24,7 @@ fn main() -> JsonResult<()>{
   let items_to_show = cli.items as usize;
   let file_to_show_errors_for = cli.file_filter;
   let show_warnings = cli.show_warnings;
-
+  let filtered_out = cli.filtered_out;
   print_start_banner();
 
   let all_messages = get_all_messages();
@@ -34,7 +34,7 @@ fn main() -> JsonResult<()>{
   let limited_by_item_size: Vec<CompilerMessage> =
     by_number(level_info.level_types, items_to_show, show_warnings);
 
-  print_stdout_lines(all_messages.stdout_lines);
+  print_stdout_lines(all_messages.stdout_lines, filtered_out);
   print_errors(all_messages.errors);
   print_compiler_output(limited_by_item_size, level_info.status);
 

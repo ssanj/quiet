@@ -57,9 +57,9 @@ pub fn print_errors(errors: Vec<String>) {
 }
 
 
-pub fn print_stdout_lines(stdout_lines: Vec<String>) {
+pub fn print_stdout_lines(stdout_lines: Vec<String>, filtered_out: Vec<String>) {
   let line_types: Vec<LineType> = get_line_types(stdout_lines);
-  let stdout_lines: Vec<String> = get_stdout_lines(line_types);
+  let stdout_lines: Vec<String> = get_stdout_lines(line_types, filtered_out);
 
   stdout_lines
     .into_iter()
@@ -67,7 +67,7 @@ pub fn print_stdout_lines(stdout_lines: Vec<String>) {
 }
 
 
-fn get_stdout_lines(line_types: Vec<LineType>) -> Vec<String> {
+fn get_stdout_lines(line_types: Vec<LineType>, filtered_out: Vec<String>) -> Vec<String> {
   let mut test_results_buffer: HashMap<&str, u32> = HashMap::new();
 
   line_types
@@ -108,7 +108,7 @@ fn get_stdout_lines(line_types: Vec<LineType>) -> Vec<String> {
           None
         },
         LineType::SingleTestFailed(line) => Some(failed_test_name_string(line.as_str())),
-        LineType::Unprocessed(line) => Some(default_stdout_string(line.as_str())),
+        LineType::Unprocessed(line) => default_stdout_string(line.as_str(), &filtered_out),
       }
     })
     .collect()
@@ -223,7 +223,15 @@ fn test_success_string(line: &str, maybe_dots: Option<&str>) -> String {
   }
 }
 
+fn default_stdout_string(line: &str, filtered_out: &[String]) -> Option<String>{
+  let is_filtered =
+    filtered_out
+    .iter()
+    .any(|filter| line.contains(filter));
 
-fn default_stdout_string(line: &str) -> String {
-  s!("{} {}", RGB(133, 138, 118).paint("stdout:"), line)
+  if !is_filtered {
+    Some(s!("{} {}", RGB(133, 138, 118).paint("stdout:"), line))
+  } else {
+    None
+  }
 }
