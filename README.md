@@ -15,11 +15,12 @@ Reduce Cargo's compiler information output
 Usage: quiet [OPTIONS] --items <ITEMS>
 
 Options:
-      --items <ITEMS>              The number of items to show. Values range from 0 to 255. This includes errors and warnings to display. By default only errors are shown. Use --show-warnings to include warnings
-      --show-warnings              Flag to include warnings in the output
-      --file-filter <FILE_FILTER>  The file (if any) to filter on. Matches the file at the end of the path so you don't have to specify a full path. Example: --file-filter main.rs
-  -h, --help                       Print help information (use `--help` for more detail)
-  -V, --version                    Print version information
+      --items <ITEMS>                The number of items to show. Values range from 0 to 255. This includes errors and warnings to display. By default only errors are shown. Use --show-warnings to include warnings
+      --show-warnings                Flag to include warnings in the output
+      --file-filter <FILE_FILTER>    The file (if any) to filter on. Matches the file at the end of the path so you don't have to specify a full path. Example: --file-filter main.rs
+      --filtered-out <FILTERED_OUT>  Strings to filter out from the output. Note, this only applies to Strings quiet does not need to output. Example --filtered-out "libunwind: malformed"
+  -h, --help                         Print help information (use `--help` for more detail)
+  -V, --version                      Print version information
 ```
 
 Cargo output should be passed to Quiet through the following format:
