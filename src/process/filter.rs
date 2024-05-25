@@ -17,8 +17,7 @@ pub fn by_filename(file_to_show_errors_for: Option<String>, matched: Vec<Compile
                   .ends_with(&file_name_filter)
                 });
 
-           let has_matches = !filter_matches.collect::<Vec<_>>().is_empty();
-           has_matches
+          !filter_matches.collect::<Vec<_>>().is_empty()
         })
         .collect::<Vec<_>>()
     },

@@ -92,12 +92,12 @@ fn get_stdout_lines(line_types: Vec<LineType>, filtered_out: Vec<String>) -> Vec
           Some(output)
         },
         LineType::TestDots(line) => Some(test_run_dots_string(line.as_str())),
-        LineType::Finished(_) => None,
-        LineType::Compiling(_) => None,
-        LineType::Error(_) => None,
-        LineType::Warning(_) => None,
+        LineType::Finished => None,
+        LineType::Compiling => None,
+        LineType::Error => None,
+        LineType::Warning => None,
         LineType::Running(line) => Some(test_name_string(line.as_str())),
-        LineType::SingleTestOk(_) => {
+        LineType::SingleTestOk => {
           // TODO: Move to a function
           let existing_success_count = test_results_buffer.get("success");
           if let Some(success_count) = existing_success_count {
@@ -127,20 +127,20 @@ fn get_line_types(stdout_lines: Vec<String>) -> Vec<LineType> {
         LineType::TestResultFailed(line)
       } else if line.starts_with("test result: ok.") {
         LineType::TestResultOk(line)
-      } else if line.split_inclusive(".").count() == line.len()  {
+      } else if line.split_inclusive('.').count() == line.len()  {
         LineType::TestDots(line)
       } else if line.trim().starts_with("Finished ") {
-        LineType::Finished(line)
+        LineType::Finished
       } else if line.trim().starts_with("Compiling ") {
-        LineType::Compiling(line)
+        LineType::Compiling
       } else if line.trim().starts_with("error: ") {
-        LineType::Error(line)
+        LineType::Error
       } else if line.trim().starts_with("warning: ") {
-        LineType::Warning(line)
+        LineType::Warning
       } else if line.trim().starts_with("Running ") {
         LineType::Running(line)
       } else if line.ends_with("... ok") {
-        LineType::SingleTestOk(line)
+        LineType::SingleTestOk
       } else if line.ends_with("... FAILED") {
         LineType::SingleTestFailed(line)
       } else {
@@ -163,12 +163,12 @@ enum LineType {
   TestResultFailed(String),
   TestResultOk(String),
   TestDots(String),
-  Finished(String),
-  Compiling(String),
-  Error(String),
-  Warning(String),
+  Finished,
+  Compiling,
+  Error,
+  Warning,
   Running(String),
-  SingleTestOk(String),
+  SingleTestOk,
   SingleTestFailed(String),
   Unprocessed(String),
 }
@@ -198,7 +198,7 @@ fn failure_line_string(line: &str, maybe_dots: Option<&str>) -> String {
 
 fn test_failure_string(line: &str) -> String {
   let failure = s!("test result: {}.", Red.paint("FAILED"));
-  let message = s!("{}{}", failure, line.strip_prefix("test result: FAILED.").unwrap_or_else(|| ""));
+  let message = s!("{}{}", failure, line.strip_prefix("test result: FAILED.").unwrap_or(""));
   s!("{} {}", RGB(133, 138, 118).paint("stdout:"), message)
 }
 
@@ -206,7 +206,7 @@ fn test_failure_string(line: &str) -> String {
 fn success_dots_string(successes: Option<&u32>) -> Option<String> {
   successes
     .map(|dots_count|{
-      let dots_str = (0 .. *dots_count).into_iter().map(|_| ".").collect::<String>();
+      let dots_str = (0 .. *dots_count).map(|_| ".").collect::<String>();
       s!("{}", Green.paint(dots_str))
     })
 }
@@ -214,12 +214,12 @@ fn success_dots_string(successes: Option<&u32>) -> Option<String> {
 
 fn test_success_string(line: &str, maybe_dots: Option<&str>) -> String {
   let test_result = s!("test result: {}.", Green.paint("ok"));
-  let message = s!("{}{}", test_result, line.strip_prefix("test result: ok.").unwrap_or_else(|| ""));
+  let message = s!("{}{}", test_result, line.strip_prefix("test result: ok.").unwrap_or(""));
 
   let formatted_test_result = s!("{} {}", RGB(133, 138, 118).paint("stdout:"), message);
   match maybe_dots {
     Some(dots) => s!("{}\n{}", &dots, &formatted_test_result),
-    None => s!("{}", &formatted_test_result),
+    None => formatted_test_result,
   }
 }
 

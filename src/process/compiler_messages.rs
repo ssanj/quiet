@@ -7,6 +7,7 @@ use std::format as s;
 use ansi_term::Color::Red;
 
 
+#[allow(clippy::enum_variant_names)]
 pub enum ItemTypes {
   CompilerMessageType(CompilerMessage),
   StdoutLineType(String),
@@ -37,17 +38,16 @@ fn get_compiler_messages() -> Vec<Result<CompilerMessageDecodingStatus, String>>
   stdin()
   .lock()
   .lines()
-  .into_iter()
   .map(|line_result|{
     let line = line_result.unwrap();
     // if it's not a JSON payload
-    if !&line.starts_with("{") {
+    if !&line.starts_with('{') {
       Ok(CompilerMessageDecodingStatus::StdOutLine(line))
     } else {
       let process_result: Result<CompilerMessageDecodingStatus, String> =
         process_compiler_message(line.as_str())
           .map(|maybe_cm| {
-            maybe_cm.map_or_else(|| CompilerMessageDecodingStatus::Ignore, |cm| CompilerMessageDecodingStatus::DecodedCompilerMessage(cm))
+            maybe_cm.map_or_else(|| CompilerMessageDecodingStatus::Ignore, CompilerMessageDecodingStatus::DecodedCompilerMessage)
           });
 
       process_result
@@ -61,14 +61,14 @@ fn process_compiler_message(line: &str) -> Result<Option<CompilerMessage>, Strin
   let reason =
     decode_reason(line)
       .map_err(|e| {
-          s!("******************* Failed to decode Reason from this line: {}\ncause: {}", Red.paint(line), e.to_string())
+          s!("******************* Failed to decode Reason from this line: {}\ncause: {}", Red.paint(line), e)
         })?;
 
   if reason.reason == "compiler-message" {
     decode_compiler_message(line)
-      .map(|cm| Some(cm))
+      .map(Some)
       .map_err(|e| {
-        s!("******************* Failed to decode CompilerMessage from this line: {}\ncause: {}", Red.paint(line), e.to_string())
+        s!("******************* Failed to decode CompilerMessage from this line: {}\ncause: {}", Red.paint(line), e)
       })
   } else {
     Ok(None)
@@ -77,10 +77,10 @@ fn process_compiler_message(line: &str) -> Result<Option<CompilerMessage>, Strin
 
 
 fn decode_reason(line: &str) -> serde_json::Result<Reason> {
-  serde_json::from_str(&line)
+  serde_json::from_str(line)
 }
 
 
 fn decode_compiler_message(line: &str) -> serde_json::Result<CompilerMessage> {
-  serde_json::from_str(&line)
+  serde_json::from_str(line)
 }
